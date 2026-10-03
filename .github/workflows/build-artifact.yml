@@ -1,0 +1,51 @@
+name: Build production artifact
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Linux x64 bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build production server
+        run: pnpm build
+        env:
+          NITRO_PRESET: node-server
+
+      # Archive first to preserve hidden files, symlinks, and executable bits.
+      - name: Package production bundle
+        run: tar -czf pi-simple-web-linux-x64.tar.gz .output
+
+      - name: Upload production bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi-simple-web-linux-x64
+          path: pi-simple-web-linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 30

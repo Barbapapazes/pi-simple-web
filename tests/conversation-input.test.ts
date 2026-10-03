@@ -2,9 +2,8 @@ import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-
 import type { ConversationEvent } from '../modules/conversations/runtime/shared/types/conversation.ts'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
-import process from 'node:process'
 import { test } from 'node:test'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
 import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../modules/conversations/runtime/server/services/conversation.ts'
@@ -28,11 +27,11 @@ test('new conversations accept absolute workspace paths, but existing sessions c
   assert.throws(() => validateConversationInput({ message: 'Hello', id: 'session-id', cwd }), /recorded workspace/)
 })
 
-test('workspace must exist and be a directory; omission uses the server working directory', async () => {
+test('workspace must exist and be a directory; omission uses the server user home directory', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'pi-workspace-'))
   try {
     assert.equal(await resolveConversationCwd(directory), directory)
-    assert.equal(await resolveConversationCwd(), process.cwd())
+    assert.equal(await resolveConversationCwd(), homedir())
     await assert.rejects(resolveConversationCwd(join(directory, 'missing')), /does not exist/)
     const file = join(directory, 'file.txt')
     await writeFile(file, 'not a directory')
