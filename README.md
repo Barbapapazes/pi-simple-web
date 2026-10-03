@@ -42,7 +42,7 @@ HOST=127.0.0.1 node .output/server/index.mjs
 
 ### Download a prebuilt bundle
 
-The **Build production artifact** GitHub Actions workflow builds on pushes to `main` and pull requests targeting `main`, and can also be run manually from the Actions tab. Each successful run uploads `pi-simple-web-linux-x64` and `pi-simple-web-linux-arm64` artifacts, built on native runners and retained for 30 days. The bundle includes the production server, client assets, and runtime dependencies; no source checkout, pnpm install, or local build is needed.
+The **Build production artifact** GitHub Actions workflow builds on pushes to `main` and pull requests targeting `main`, and can also be run manually from the Actions tab. Each successful run uploads `pi-simple-web-linux-x64` and `pi-simple-web-linux-arm64` artifacts, built on native runners and retained for 30 days. The bundle includes the production server, client assets, and runtime dependencies (including the QuickJS WASM used by codemode); no source checkout, pnpm install, or local build is needed. CI moves the built server outside the checkout and executes a codemode script calling a tool before publishing either architecture, so missing runtime assets fail the build rather than deployed conversations.
 
 On a **Linux x64 or ARM64** machine with **Node.js 24**, use the [GitHub CLI](https://cli.github.com/) (authenticated with `gh auth login`) to download the latest successful `main` build:
 

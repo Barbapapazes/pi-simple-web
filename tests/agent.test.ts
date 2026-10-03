@@ -77,9 +77,25 @@ for (const exposure of ['codemode', 'deferred', 'direct']) {
       assert.ok(agent.getActiveToolNames().includes(entryPoint))
       assert.ok(agent.getActiveToolNames().includes('read'), 'configured default tools are preserved')
 
-      if (exposure === 'direct') {
+      if (exposure === 'direct' || exposure === 'codemode') {
         const callable = agent.agent.state.tools.find(tool => tool.name === entryPoint)!
-        const result = await callable.execute('fixture-call', {})
+        const args = exposure === 'codemode'
+          ? { code: 'text(await tools.mcp__fixture__hello({}));' }
+          : {}
+        // Issue the parent call without a model request so nested MCP calls can
+        // traverse the real session tool pipeline.
+        agent.agent.state.messages.push({
+          role: 'assistant',
+          content: [{ type: 'toolCall', id: 'fixture-call', name: entryPoint, arguments: args }],
+          api: 'openai-completions',
+          provider: 'fixture',
+          model: 'fixture',
+          usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+          stopReason: 'toolUse',
+          timestamp: Date.now(),
+        })
+        const result = await callable.execute('fixture-call', args)
+        assert.ok(!result.isError, JSON.stringify(result.content))
         assert.match(JSON.stringify(result.content), /Hello from MCP/)
       }
 
