@@ -46,4 +46,15 @@ pnpm typecheck
 pnpm build
 ```
 
-UI styles are defined in `app/assets/css/main.css`. Pinia stores and Colada query/mutation composables are auto-imported by their Nuxt modules.
+## Code organization
+
+Features are encapsulated in two automatically registered Nuxt local modules:
+
+- `modules/sessions/`: session discovery, persisted data, usage/status calculation, queries, browsing filters, sidebar, and previews.
+- `modules/conversations/`: conversation views, composer, Markdown/tool rendering, agent runs, streaming, and input queues. It declares a dependency on sessions through `moduleDependencies`.
+
+Each module registers its own components, composables, and API handlers in `index.ts`. Runtime app code lives under `runtime/app/`; server services and handlers live under `runtime/server/`. Use `#sessions` and `#conversations` aliases for explicit cross-module app imports. Server/shared code uses relative `.ts` imports so unit tests can run directly with Node.
+
+`app/` retains the application shell, thin route wrappers, and global styles. `app/assets/css/main.css` explicitly includes `modules/` in Tailwind source scanning so utilities in local-module components are generated. Conversation-specific styles live in `modules/conversations/runtime/app/assets/css/conversation.css`. Neutral conversation data contracts live in `shared/types/conversation.ts`, allowing sessions to describe saved entries without depending on the conversations module. Sessions never imports conversations.
+
+Page routes are `/`, `/new`, and `/sessions/:id`. The sessions module exposes `GET /api/sessions` and `GET /api/sessions/:id`; the conversations module exposes `POST /api/conversations` for starting responses and submitting steering/follow-up input. Pinia stores and Colada query/mutation composables are auto-imported by their Nuxt modules.

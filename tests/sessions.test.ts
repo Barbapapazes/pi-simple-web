@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { listSessions, readSession, summarizeSession, transcriptEntry } from '../server/utils/sessions.ts'
+import { listSessions, readSession, summarizeSession, conversationEntry } from '../modules/sessions/runtime/server/services/sessions.ts'
 
 test('discovers sessions, reads the branch without rewriting, and rejects unknown IDs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'pi-web-test-'))
@@ -57,7 +57,7 @@ test('legacy sessions migrate only in memory and empty directories are supported
 })
 
 test('read calls show only the file path, while other tools retain their arguments', () => {
-  const entry = transcriptEntry({
+  const entry = conversationEntry({
     id: 'entry', parentId: null, timestamp: '2026-01-01T00:00:00.000Z', type: 'message',
     message: {
       role: 'assistant', timestamp: 1, api: 'openai-completions', provider: 'test', model: 'test-model', stopReason: 'toolUse',
@@ -79,7 +79,7 @@ test('read calls show only the file path, while other tools retain their argumen
 
 test('normalizes tool errors and safe image content', () => {
   const base = { id: 'entry', parentId: null, timestamp: '2026-01-01T00:00:00.000Z' }
-  const tool = transcriptEntry({ ...base, type: 'message', message: {
+  const tool = conversationEntry({ ...base, type: 'message', message: {
     role: 'toolResult', toolCallId: 'call', toolName: 'bash', isError: true, timestamp: 1,
     content: [{ type: 'text', text: 'Failed' }, { type: 'image', mimeType: 'image/svg+xml', data: 'PHN2Zz4=' }],
     details: { diff: '-old\n+new' },
@@ -89,7 +89,7 @@ test('normalizes tool errors and safe image content', () => {
   assert.equal(tool.toolCallId, 'call')
   assert.equal(tool.diff, '-old\n+new')
   assert.equal(tool.blocks[1]?.type, 'data')
-  const message = transcriptEntry({ ...base, type: 'custom_message', customType: 'attachment', display: true,
+  const message = conversationEntry({ ...base, type: 'custom_message', customType: 'attachment', display: true,
     content: [{ type: 'image', mimeType: 'image/png', data: 'YWJj' }],
   })
   assert.equal(message.blocks[0]?.src, 'data:image/png;base64,YWJj')

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, appendFile, readFile, rm, stat, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { listSessions, listSessionSummaries, readSession } from '../server/utils/sessions.ts'
-import { readSessionUsage } from '../server/utils/session-usage.ts'
+import { listSessions, listSessionSummaries, readSession } from '../modules/sessions/runtime/server/services/sessions.ts'
+import { readSessionUsage } from '../modules/sessions/runtime/server/services/session-usage.ts'
 
 const timestamp = '2026-01-01T00:00:00.000Z'
 function message(id: string, input = 10) {

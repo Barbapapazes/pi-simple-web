@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
-import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../server/utils/status.ts'
+import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../modules/sessions/runtime/server/services/status.ts'
 import { formatCost, formatTokens } from '../shared/utils/status.ts'
 
 function assistant(input = 18, output = 704, cacheRead = 14000, cacheWrite = 5700, cost = 0.023) {
