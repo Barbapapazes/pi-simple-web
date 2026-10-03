@@ -29,12 +29,12 @@ useHead({ title: 'New conversation · Autobots' })
         </div>
         <div class="space-y-2">
           <label for="workspace-path" class="block text-sm font-medium text-highlighted">Workspace</label>
-          <UInput id="workspace-path" v-model="cwd" list="workspace-suggestions" icon="i-lucide-folder-open" placeholder="Server working directory (default)" :disabled="conversation.busy" class="w-full" aria-describedby="workspace-help" />
+          <UInput id="workspace-path" v-model="cwd" list="workspace-suggestions" icon="i-lucide-folder-open" placeholder="Home directory (~, default)" :disabled="conversation.busy" class="w-full" aria-describedby="workspace-help" />
           <datalist id="workspace-suggestions">
             <option v-for="workspace in workspaces.filter(Boolean)" :key="workspace" :value="workspace" />
           </datalist>
           <p id="workspace-help" class="text-xs text-muted">
-            Enter an existing absolute directory path on the server, or leave blank to use its working directory. Pi will use it for files, commands, and project instructions.
+            Enter an existing absolute directory path on the server, or leave blank to use the server user's home directory (~). Pi will use it for files, commands, and project instructions.
           </p>
         </div>
         <ConversationComposer :cwd="cwd" />
