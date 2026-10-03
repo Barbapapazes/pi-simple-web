@@ -1,0 +1,32 @@
+{
+  "name": "pi-simple-web",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev --host 127.0.0.1",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@comark/nuxt": "^0.7.0",
+    "@earendil-works/pi-coding-agent": "^1.0.1",
+    "@iconify-json/lucide": "^1.2.139",
+    "@nuxt/ui": "^4.11.3",
+    "@pinia/colada": "^1.4.7",
+    "@pinia/colada-nuxt": "^1.2.0",
+    "@pinia/nuxt": "^1.0.2",
+    "nuxt": "^4.5.2",
+    "pinia": "^4.0.3",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.12"
+  }
+}
