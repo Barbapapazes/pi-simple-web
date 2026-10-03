@@ -2,8 +2,8 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent'
 import type { SessionStatus } from '../../../../sessions/runtime/shared/types/sessions.ts'
 import type { ConversationEvent, StreamingBehavior } from '../../shared/types/conversation.ts'
 import { stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { isAbsolute, normalize } from 'node:path'
-import process from 'node:process'
 import { conversationEntry } from '../../../../sessions/runtime/server/services/sessions.ts'
 
 export function validateConversationInput(body: unknown): { message: string, id?: string, cwd?: string, streamingBehavior?: StreamingBehavior } {
@@ -57,7 +57,7 @@ export function createConversationRun(session: Pick<AgentSession, 'prompt'>) {
 }
 
 export async function resolveConversationCwd(cwd?: string): Promise<string> {
-  const workspace = cwd ?? process.cwd()
+  const workspace = cwd ?? homedir()
   let directory
   try {
     directory = await stat(workspace)

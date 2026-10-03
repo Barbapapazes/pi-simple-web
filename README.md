@@ -4,7 +4,7 @@ Local Pi chat and session browser built with Nuxt, [Nuxt UI](https://ui.nuxt.com
 
 Start a new chat, continue existing sessions, and watch Pi's text, thinking, and tool results stream live. Browse sessions across workspaces, filter by workspace or search session names/first messages, and inspect transcripts and image attachments. The dashboard uses Nuxt UI, while the conversation rendering follows Pi's terminal: monospace text, full-width prompt bands, bare assistant replies, muted thinking, and state-colored tool panels.
 
-New chats let you choose a workspace: enter an existing absolute directory path on the server, pick a suggestion from previous sessions, or leave it blank to use the server's working directory. Pi uses that workspace for tools, project instructions, and resource discovery, with its configured defaults (model, thinking level, credentials, and tools). Existing conversations resume in their recorded workspace. There are no model selectors. Configure Pi normally through its CLI/configuration before chatting.
+New chats let you choose a workspace: enter an existing absolute directory path on the server, pick a suggestion from previous sessions, or leave it blank to use the server user's home directory (`~`). Pi uses that workspace for tools, project instructions, and resource discovery, with its configured defaults (model, thinking level, credentials, and tools). Existing conversations resume in their recorded workspace. There are no model selectors. Configure Pi normally through its CLI/configuration before chatting.
 
 Requires Node.js 22.18+ (or Node.js 24) and pnpm.
 
