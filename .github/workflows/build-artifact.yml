@@ -12,8 +12,16 @@ permissions:
 
 jobs:
   build:
-    name: Build Linux x64 bundle
-    runs-on: ubuntu-24.04
+    name: Build Linux ${{ matrix.arch }} bundle
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
       - name: Check out source
@@ -40,12 +48,12 @@ jobs:
 
       # Archive first to preserve hidden files, symlinks, and executable bits.
       - name: Package production bundle
-        run: tar -czf pi-simple-web-linux-x64.tar.gz .output
+        run: tar -czf pi-simple-web-linux-${{ matrix.arch }}.tar.gz .output
 
       - name: Upload production bundle
         uses: actions/upload-artifact@v4
         with:
-          name: pi-simple-web-linux-x64
-          path: pi-simple-web-linux-x64.tar.gz
+          name: pi-simple-web-linux-${{ matrix.arch }}
+          path: pi-simple-web-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 30

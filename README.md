@@ -42,22 +42,27 @@ HOST=127.0.0.1 node .output/server/index.mjs
 
 ### Download a prebuilt bundle
 
-The **Build production artifact** GitHub Actions workflow builds on pushes to `main` and pull requests targeting `main`, and can also be run manually from the Actions tab. Each successful run uploads a `pi-simple-web-linux-x64` artifact, retained for 30 days. The bundle includes the production server, client assets, and runtime dependencies; no source checkout, pnpm install, or local build is needed.
+The **Build production artifact** GitHub Actions workflow builds on pushes to `main` and pull requests targeting `main`, and can also be run manually from the Actions tab. Each successful run uploads `pi-simple-web-linux-x64` and `pi-simple-web-linux-arm64` artifacts, built on native runners and retained for 30 days. The bundle includes the production server, client assets, and runtime dependencies; no source checkout, pnpm install, or local build is needed.
 
-On a **Linux x64** machine with **Node.js 24**, use the [GitHub CLI](https://cli.github.com/) (authenticated with `gh auth login`) to download the latest successful `main` build:
+On a **Linux x64 or ARM64** machine with **Node.js 24**, use the [GitHub CLI](https://cli.github.com/) (authenticated with `gh auth login`) to download the latest successful `main` build:
 
 ```bash
 mkdir -p pi-simple-web
 cd pi-simple-web
 # Use the repository where the workflow runs if you maintain a fork.
 REPO=Barbapapazes/pi-simple-web
+case "$(uname -m)" in
+  x86_64) ARCH=x64 ;;
+  aarch64) ARCH=arm64 ;;
+  *) echo "Unsupported architecture" >&2; exit 1 ;;
+esac
 RUN_ID=$(gh run list --repo "$REPO" --workflow build-artifact.yml \
   --branch main --event push --status success --limit 1 \
   --json databaseId --jq '.[0].databaseId // empty')
 # If no successful build exists yet, wait for one before continuing.
 test -n "$RUN_ID" || { echo 'No successful main build found' >&2; exit 1; }
-gh run download "$RUN_ID" --repo "$REPO" --name pi-simple-web-linux-x64
-tar -xzf pi-simple-web-linux-x64.tar.gz
+gh run download "$RUN_ID" --repo "$REPO" --name "pi-simple-web-linux-$ARCH"
+tar -xzf "pi-simple-web-linux-$ARCH.tar.gz"
 HOST=127.0.0.1 PORT=3000 node .output/server/index.mjs
 ```
 
@@ -65,7 +70,19 @@ Alternatively, download the artifact ZIP from a successful run's **Actions → A
 
 The bundle does not include Pi credentials, settings, or sessions. Configure Pi on the target machine and run the server as that user; `NUXT_PI_SESSION_DIR` can override the session directory as above. The server user's home directory (`~`) is the default workspace for new conversations. Keep `HOST=127.0.0.1`: the app has no authentication and can execute commands.
 
-Builds can contain native dependencies, so this artifact is not intended for macOS, Windows, or ARM machines; build locally on those platforms. To update, stop the server, remove the old `.output` directory, download and extract the new bundle, and restart. GitHub Actions artifacts expire after 30 days; they are build downloads, not permanent release assets.
+Builds can contain native dependencies: choose the artifact matching the target architecture. These Linux bundles are not intended for macOS or Windows; build on a suitable machine for those platforms. To update, stop the server, remove the old `.output` directory, download and extract the new bundle, and restart. GitHub Actions artifacts expire after 30 days; they are build downloads, not permanent release assets.
+
+### Run the prebuilt bundle with PM2
+
+Keep the extracted bundle outside your source checkout (for example, `~/prod/pi-simple-web-runtime`). With PM2 already installed, run from that directory:
+
+```bash
+HOST=127.0.0.1 PORT=4001 NODE_ENV=production pm2 start .output/server/index.mjs \
+  --name pi-simple-web --cwd "$PWD" --interpreter "$(command -v node)"
+pm2 save
+```
+
+If a process named `pi-simple-web` already exists, stop and delete its PM2 entry before starting the new path. Keep the old bundle for rollback. For subsequent updates, download into a fresh directory, stop the process before replacing the bundle, then restart it and run `pm2 save`. Restarts interrupt active conversations. On low-memory hosts, always build in CI rather than compiling Nuxt locally.
 
 ## Checks
 
