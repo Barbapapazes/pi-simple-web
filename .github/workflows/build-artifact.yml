@@ -46,6 +46,14 @@ jobs:
         env:
           NITRO_PRESET: node-server
 
+      - name: Smoke test standalone codemode runtime
+        run: |
+          # Move outside the checkout so missing dependencies cannot fall back to pnpm.
+          SMOKE_DIR=$(mktemp -d)
+          trap 'mv "$SMOKE_DIR/.output" .output; rmdir "$SMOKE_DIR"' EXIT
+          mv .output "$SMOKE_DIR/.output"
+          node scripts/smoke-codemode.mjs "$SMOKE_DIR/.output"
+
       # Archive first to preserve hidden files, symlinks, and executable bits.
       - name: Package production bundle
         run: tar -czf pi-simple-web-linux-${{ matrix.arch }}.tar.gz .output
