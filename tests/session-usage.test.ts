@@ -1,25 +1,29 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, appendFile, readFile, rm, stat, utimes } from 'node:fs/promises'
+import { appendFile, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { listSessions, listSessionSummaries, readSession } from '../modules/sessions/runtime/server/services/sessions.ts'
+import { test } from 'node:test'
 import { readSessionUsage } from '../modules/sessions/runtime/server/services/session-usage.ts'
+import { listSessions, listSessionSummaries, readSession } from '../modules/sessions/runtime/server/services/sessions.ts'
 
 const timestamp = '2026-01-01T00:00:00.000Z'
 function message(id: string, input = 10) {
-  return JSON.stringify({ type: 'message', id, parentId: 'user', timestamp, message: {
-    role: 'assistant', content: [{ type: 'text', text: 'Reply' }], timestamp: 2,
-    api: 'openai-completions', provider: 'test', model: 'test-model', stopReason: 'stop',
-    usage: { input, output: 20, cacheRead: 30, cacheWrite: 40, totalTokens: input + 90,
-      cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.04, total: 0.1 } },
-  } }) + '\n'
+  return `${JSON.stringify({ type: 'message', id, parentId: 'user', timestamp, message: {
+    role: 'assistant',
+    content: [{ type: 'text', text: 'Reply' }],
+    timestamp: 2,
+    api: 'openai-completions',
+    provider: 'test',
+    model: 'test-model',
+    stopReason: 'stop',
+    usage: { input, output: 20, cacheRead: 30, cacheWrite: 40, totalTokens: input + 90, cost: { input: 0.01, output: 0.02, cacheRead: 0.03, cacheWrite: 0.04, total: 0.1 } },
+  } })}\n`
 }
 function header(version = 3) {
-  return [
+  return `${[
     { type: 'session', version, id: 'usage-test', cwd: '/test', timestamp },
     { type: 'message', id: 'user', parentId: null, timestamp, message: { role: 'user', content: 'Hi', timestamp: 1 } },
-  ].map(entry => JSON.stringify(entry)).join('\n') + '\n'
+  ].map(entry => JSON.stringify(entry)).join('\n')}\n`
 }
 
 test('overview usage matches detail across branches and caches only unchanged files', async () => {
@@ -55,7 +59,8 @@ test('overview usage matches detail across branches and caches only unchanged fi
     assert.equal(await readSessionUsage(info), null)
     await writeFile(path, header() + message('restored', 50))
     assert.equal((await readSessionUsage(info))?.input, 50)
-  } finally {
+  }
+  finally {
     await rm(root, { recursive: true, force: true })
   }
 })
@@ -75,7 +80,8 @@ test('empty and legacy usage remain readable; invalid headers are unavailable an
     assert.equal(await readSessionUsage(info), null)
     await writeFile(path, header())
     assert.deepEqual(await readSessionUsage(info), { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 })
-  } finally {
+  }
+  finally {
     await rm(root, { recursive: true, force: true })
   }
 })

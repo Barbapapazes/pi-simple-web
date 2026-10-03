@@ -37,11 +37,17 @@ const groups = computed(() => {
       <span class="text-xs font-medium text-muted">SESSION HISTORY</span>
       <UButton icon="i-lucide-refresh-cw" size="xs" color="neutral" variant="ghost" :loading="isLoading" aria-label="Refresh session history" @click="refetch()" />
     </div>
-    <p v-if="error" class="px-2 text-xs text-error" role="alert">Unable to load sessions. Try refreshing.</p>
-    <p v-else-if="isPending" class="px-2 text-xs text-muted" role="status">Loading sessions…</p>
+    <p v-if="error" class="px-2 text-xs text-error" role="alert">
+      Unable to load sessions. Try refreshing.
+    </p>
+    <p v-else-if="isPending" class="px-2 text-xs text-muted" role="status">
+      Loading sessions…
+    </p>
     <nav v-else aria-label="Session history" class="min-h-0 flex-1 space-y-6 overflow-y-auto">
       <div v-for="group in groups" :key="group.label">
-        <h2 v-if="group.label !== 'Conversations'" class="mb-2 px-2 text-xs font-medium text-muted">{{ group.label }}</h2>
+        <h2 v-if="group.label !== 'Conversations'" class="mb-2 px-2 text-xs font-medium text-muted">
+          {{ group.label }}
+        </h2>
         <div class="space-y-0.5">
           <SessionPreviewPopover
             v-for="session in group.sessions"
@@ -52,11 +58,11 @@ const groups = computed(() => {
             <NuxtLink
               :to="`/sessions/${session.id}`"
               :aria-current="route.params.id === session.id ? 'page' : undefined"
+              class="group flex min-w-0 items-center gap-2 rounded-md px-2 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-primary"
+              :class="route.params.id === session.id ? 'bg-primary/10 text-primary' : 'text-toned hover:bg-elevated hover:text-highlighted'"
               @click="close"
               @mouseenter="preloadSession(session.id)"
               @focus="preloadSession(session.id)"
-              class="group flex min-w-0 items-center gap-2 rounded-md px-2 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-primary"
-              :class="route.params.id === session.id ? 'bg-primary/10 text-primary' : 'text-toned hover:bg-elevated hover:text-highlighted'"
             >
               <UIcon name="i-lucide-message-square" class="size-4 shrink-0 opacity-60" />
               <span class="truncate">{{ session.name || session.firstMessage || 'Untitled session' }}</span>
@@ -64,7 +70,9 @@ const groups = computed(() => {
           </SessionPreviewPopover>
         </div>
       </div>
-      <p v-if="!groups.length" class="px-2 text-xs text-muted">{{ sessions?.length ? 'No matching sessions.' : 'No sessions yet.' }}</p>
+      <p v-if="!groups.length" class="px-2 text-xs text-muted">
+        {{ sessions?.length ? 'No matching sessions.' : 'No sessions yet.' }}
+      </p>
     </nav>
   </template>
 </template>

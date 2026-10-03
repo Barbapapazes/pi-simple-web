@@ -40,7 +40,10 @@ HOST=127.0.0.1 node .output/server/index.mjs
 
 ## Checks
 
+ESLint uses [`@antfu/eslint-config`](https://github.com/antfu/eslint-config) for TypeScript, Vue, and code style. Run `pnpm lint:fix` to apply automatic fixes.
+
 ```bash
+pnpm lint
 pnpm test
 pnpm typecheck
 pnpm build

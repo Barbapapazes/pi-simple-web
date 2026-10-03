@@ -1,11 +1,19 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
-import { groupToolResults, previewLines } from '../modules/conversations/runtime/shared/utils/conversation.ts'
 import type { ConversationEntry } from '../shared/types/conversation.ts'
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { groupToolResults, previewLines } from '../modules/conversations/runtime/shared/utils/conversation.ts'
 
-const entry = (id: string, fields: Partial<ConversationEntry>): ConversationEntry => ({
-  id, type: 'message', role: 'assistant', timestamp: '2026-01-01T00:00:00Z', isError: false, blocks: [], ...fields,
-})
+function entry(id: string, fields: Partial<ConversationEntry>): ConversationEntry {
+  return {
+    id,
+    type: 'message',
+    role: 'assistant',
+    timestamp: '2026-01-01T00:00:00Z',
+    isError: false,
+    blocks: [],
+    ...fields,
+  }
+}
 
 test('pairs parallel tool results by ID without mutating the conversation', () => {
   const entries = [

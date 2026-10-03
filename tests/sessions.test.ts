@@ -1,9 +1,9 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { listSessions, readSession, summarizeSession, conversationEntry } from '../modules/sessions/runtime/server/services/sessions.ts'
+import { test } from 'node:test'
+import { conversationEntry, listSessions, readSession, summarizeSession } from '../modules/sessions/runtime/server/services/sessions.ts'
 
 test('discovers sessions, reads the branch without rewriting, and rejects unknown IDs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'pi-web-test-'))
@@ -17,7 +17,7 @@ test('discovers sessions, reads the branch without rewriting, and rejects unknow
       { type: 'message', id: 'old', parentId: 'user', timestamp, message: { role: 'user', content: 'Abandoned branch', timestamp: 2 } },
       { type: 'message', id: 'new', parentId: 'user', timestamp, message: { role: 'user', content: 'Current branch', timestamp: 3 } },
     ]
-    const original = entries.map(entry => JSON.stringify(entry)).join('\n') + '\n'
+    const original = `${entries.map(entry => JSON.stringify(entry)).join('\n')}\n`
     await writeFile(path, original)
     const sessions = await listSessions(root)
     assert.equal(sessions.length, 1)
@@ -31,7 +31,8 @@ test('discovers sessions, reads the branch without rewriting, and rejects unknow
     assert.equal(await readFile(path, 'utf8'), original)
     assert.equal(await readSession('../../etc/passwd', root), null)
     assert.equal(await readSession('missing', root), null)
-  } finally {
+  }
+  finally {
     await rm(root, { recursive: true, force: true })
   }
 })
@@ -41,26 +42,35 @@ test('legacy sessions migrate only in memory and empty directories are supported
   try {
     assert.deepEqual(await listSessions(root), [])
     const path = join(root, 'legacy.jsonl')
-    const original = [
+    const original = `${[
       { type: 'session', version: 1, id: 'legacy', timestamp: '2025-01-01T00:00:00.000Z', cwd: '/legacy' },
       { type: 'message', timestamp: '2025-01-01T00:00:01.000Z', message: { role: 'user', content: 'Legacy message', timestamp: 1 } },
-    ].map(entry => JSON.stringify(entry)).join('\n') + '\n'
+    ].map(entry => JSON.stringify(entry)).join('\n')}\n`
     await writeFile(path, original)
     const session = await readSession('legacy', root)
     assert.ok(session)
     assert.equal(session.branch[0]?.blocks[0]?.text, 'Legacy message')
     assert.ok(session.branch[0]?.id)
     assert.equal(await readFile(path, 'utf8'), original)
-  } finally {
+  }
+  finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
 test('read calls show only the file path, while other tools retain their arguments', () => {
   const entry = conversationEntry({
-    id: 'entry', parentId: null, timestamp: '2026-01-01T00:00:00.000Z', type: 'message',
+    id: 'entry',
+    parentId: null,
+    timestamp: '2026-01-01T00:00:00.000Z',
+    type: 'message',
     message: {
-      role: 'assistant', timestamp: 1, api: 'openai-completions', provider: 'test', model: 'test-model', stopReason: 'toolUse',
+      role: 'assistant',
+      timestamp: 1,
+      api: 'openai-completions',
+      provider: 'test',
+      model: 'test-model',
+      stopReason: 'toolUse',
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
       content: [
         { type: 'toolCall', id: 'read-call', name: 'read', arguments: { path: '/test/file.ts', offset: 20, limit: 10 } },
@@ -70,7 +80,10 @@ test('read calls show only the file path, while other tools retain their argumen
     },
   })
   assert.deepEqual(entry.blocks[0], {
-    type: 'toolCall', name: 'read', text: '/test/file.ts', toolCallId: 'read-call',
+    type: 'toolCall',
+    name: 'read',
+    text: '/test/file.ts',
+    toolCallId: 'read-call',
     arguments: { path: '/test/file.ts', offset: 20, limit: 10 },
   })
   assert.equal(entry.blocks[1]?.text, '')
@@ -80,7 +93,11 @@ test('read calls show only the file path, while other tools retain their argumen
 test('normalizes tool errors and safe image content', () => {
   const base = { id: 'entry', parentId: null, timestamp: '2026-01-01T00:00:00.000Z' }
   const tool = conversationEntry({ ...base, type: 'message', message: {
-    role: 'toolResult', toolCallId: 'call', toolName: 'bash', isError: true, timestamp: 1,
+    role: 'toolResult',
+    toolCallId: 'call',
+    toolName: 'bash',
+    isError: true,
+    timestamp: 1,
     content: [{ type: 'text', text: 'Failed' }, { type: 'image', mimeType: 'image/svg+xml', data: 'PHN2Zz4=' }],
     details: { diff: '-old\n+new' },
   } })
@@ -89,8 +106,6 @@ test('normalizes tool errors and safe image content', () => {
   assert.equal(tool.toolCallId, 'call')
   assert.equal(tool.diff, '-old\n+new')
   assert.equal(tool.blocks[1]?.type, 'data')
-  const message = conversationEntry({ ...base, type: 'custom_message', customType: 'attachment', display: true,
-    content: [{ type: 'image', mimeType: 'image/png', data: 'YWJj' }],
-  })
+  const message = conversationEntry({ ...base, type: 'custom_message', customType: 'attachment', display: true, content: [{ type: 'image', mimeType: 'image/png', data: 'YWJj' }] })
   assert.equal(message.blocks[0]?.src, 'data:image/png;base64,YWJj')
 })

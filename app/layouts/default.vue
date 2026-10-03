@@ -1,7 +1,9 @@
 <script setup lang="ts">
 const route = useRoute()
 const sidebarOpen = ref(false)
-watch(() => route.fullPath, () => { sidebarOpen.value = false })
+watch(() => route.fullPath, () => {
+  sidebarOpen.value = false
+})
 </script>
 
 <template>

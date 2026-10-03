@@ -20,8 +20,12 @@ useHead({ title: 'New conversation · Autobots' })
       <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 py-12">
         <div class="space-y-4">
           <span class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-3xl font-semibold text-primary">π</span>
-          <h1 class="text-3xl font-semibold tracking-tight text-highlighted sm:text-4xl">What can we work on?</h1>
-          <p class="text-muted">Start a conversation with Pi in your local workspace.</p>
+          <h1 class="text-3xl font-semibold tracking-tight text-highlighted sm:text-4xl">
+            What can we work on?
+          </h1>
+          <p class="text-muted">
+            Start a conversation with Pi in your local workspace.
+          </p>
         </div>
         <div class="space-y-2">
           <label for="workspace-path" class="block text-sm font-medium text-highlighted">Workspace</label>
@@ -29,7 +33,9 @@ useHead({ title: 'New conversation · Autobots' })
           <datalist id="workspace-suggestions">
             <option v-for="workspace in workspaces.filter(Boolean)" :key="workspace" :value="workspace" />
           </datalist>
-          <p id="workspace-help" class="text-xs text-muted">Enter an existing absolute directory path on the server, or leave blank to use its working directory. Pi will use it for files, commands, and project instructions.</p>
+          <p id="workspace-help" class="text-xs text-muted">
+            Enter an existing absolute directory path on the server, or leave blank to use its working directory. Pi will use it for files, commands, and project instructions.
+          </p>
         </div>
         <ConversationComposer :cwd="cwd" />
       </div>

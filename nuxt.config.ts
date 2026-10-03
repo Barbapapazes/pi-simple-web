@@ -8,10 +8,10 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/pi.svg' }]
-    }
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/pi.svg' }],
+    },
   },
   runtimeConfig: {
-    piSessionDir: ''
-  }
+    piSessionDir: '',
+  },
 })

@@ -8,24 +8,31 @@ export function useConversationScroll(entries: Ref<unknown[]>) {
 
   function onScroll() {
     const element = viewport.value
-    if (element) followTail.value = element.scrollHeight - element.clientHeight - element.scrollTop < 64
+    if (element)
+      followTail.value = element.scrollHeight - element.clientHeight - element.scrollTop < 64
   }
   function scrollToLatest() {
     const element = viewport.value
-    if (element) element.scrollTop = element.scrollHeight
+    if (element)
+      element.scrollTop = element.scrollHeight
   }
   function jumpToLatest() {
     followTail.value = true
     scrollToLatest()
   }
   onMounted(() => {
-    observer = new ResizeObserver(() => { if (followTail.value) scrollToLatest() })
-    if (content.value) observer.observe(content.value)
+    observer = new ResizeObserver(() => {
+      if (followTail.value)
+        scrollToLatest()
+    })
+    if (content.value)
+      observer.observe(content.value)
   })
   onBeforeUnmount(() => observer?.disconnect())
   watch(entries, async () => {
     await nextTick()
-    if (followTail.value) scrollToLatest()
+    if (followTail.value)
+      scrollToLatest()
   })
   return { viewport, content, followTail, onScroll, jumpToLatest }
 }

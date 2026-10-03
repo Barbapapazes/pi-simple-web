@@ -1,21 +1,24 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { test } from 'node:test'
+import { promisify } from 'node:util'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
 import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../modules/sessions/runtime/server/services/status.ts'
 import { formatCost, formatTokens } from '../shared/utils/status.ts'
 
 function assistant(input = 18, output = 704, cacheRead = 14000, cacheWrite = 5700, cost = 0.023) {
   return {
-    role: 'assistant' as const, content: [{ type: 'text' as const, text: 'Reply' }],
-    api: 'openai-completions' as const, provider: 'test', model: 'test-model', timestamp: 1,
+    role: 'assistant' as const,
+    content: [{ type: 'text' as const, text: 'Reply' }],
+    api: 'openai-completions' as const,
+    provider: 'test',
+    model: 'test-model',
+    timestamp: 1,
     stopReason: 'stop' as const,
-    usage: { input, output, cacheRead, cacheWrite, totalTokens: input + output + cacheRead + cacheWrite,
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: cost } },
+    usage: { input, output, cacheRead, cacheWrite, totalTokens: input + output + cacheRead + cacheWrite, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: cost } },
   }
 }
 
@@ -24,8 +27,7 @@ test('cost formatting preserves small nonzero estimates', () => {
 })
 
 test('compact token formatting matches the terminal footer', () => {
-  assert.deepEqual([0, 18, 704, 1000, 5700, 14000, 999999, 1100000, 10000000].map(formatTokens),
-    ['0', '18', '704', '1.0k', '5.7k', '14k', '1000k', '1.1M', '10M'])
+  assert.deepEqual([0, 18, 704, 1000, 5700, 14000, 999999, 1100000, 10000000].map(formatTokens), ['0', '18', '704', '1.0k', '5.7k', '14k', '1000k', '1.1M', '10M'])
 })
 
 test('usage includes abandoned branches, summaries, tools and cache warming without double counting', () => {
@@ -52,8 +54,7 @@ test('context follows the active branch, includes trailing tools, and invalidate
   const manager = SessionManager.inMemory('/test')
   const user = manager.appendMessage({ role: 'user', content: 'Hi', timestamp: 1 })
   const reply = manager.appendMessage(assistant(10, 20, 70, 0))
-  manager.appendMessage({ role: 'toolResult', toolName: 'bash', toolCallId: 'call', isError: false,
-    content: [{ type: 'text', text: '12345678' }], timestamp: 2 })
+  manager.appendMessage({ role: 'toolResult', toolName: 'bash', toolCallId: 'call', isError: false, content: [{ type: 'text', text: '12345678' }], timestamp: 2 })
   assert.deepEqual(recordedContext(manager, 1000), { tokens: 102, contextWindow: 1000, percent: 10.2 })
   manager.appendCompaction('Summary', user, 102)
   assert.equal(recordedContext(manager, 1000)?.tokens, null)
@@ -86,10 +87,10 @@ test('workspace status discovers the current Git branch', async () => {
   try {
     await promisify(execFile)('git', ['init', '-b', 'status-test', cwd])
     // rev-parse requires a first commit; no user identity or hooks needed.
-    await promisify(execFile)('git', ['-C', cwd, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
-      '-c', 'core.hooksPath=/dev/null', 'commit', '--allow-empty', '-m', 'Test'])
+    await promisify(execFile)('git', ['-C', cwd, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'core.hooksPath=/dev/null', 'commit', '--allow-empty', '-m', 'Test'])
     assert.equal((await workspaceStatus(cwd)).gitBranch, 'status-test')
-  } finally {
+  }
+  finally {
     await rm(cwd, { recursive: true, force: true })
   }
 })

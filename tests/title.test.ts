@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { truncateTitle } from '../shared/utils/title.ts'
 
 test('titles of at most 100 characters remain unchanged', () => {

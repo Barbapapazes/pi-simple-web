@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { parseMarkdown } from '@comark/nuxt/parse'
 import { conversationMarkdownOptions } from '../modules/conversations/runtime/shared/utils/markdown.ts'
 

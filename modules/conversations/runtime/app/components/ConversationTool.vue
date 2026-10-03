@@ -9,7 +9,8 @@ const isShell = computed(() => ['bash', 'powershell'].includes(name.value))
 const isFile = computed(() => ['read', 'edit', 'write'].includes(name.value))
 const path = computed(() => String(args.value.path || args.value.file_path || (name.value === 'read' ? props.block.text : '') || '…'))
 const range = computed(() => {
-  if (name.value !== 'read' || (args.value.offset == null && args.value.limit == null)) return ''
+  if (name.value !== 'read' || (args.value.offset == null && args.value.limit == null))
+    return ''
   const start = Number(args.value.offset ?? 1)
   return `:${start}${args.value.limit != null ? `-${start + Number(args.value.limit) - 1}` : ''}`
 })

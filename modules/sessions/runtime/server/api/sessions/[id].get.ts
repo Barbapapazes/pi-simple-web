@@ -2,7 +2,7 @@ import { readSession } from '../../services/sessions'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
-  if (!id || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+  if (!id || !/^[\w-]{1,128}$/.test(id)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid session ID' })
   }
   const { piSessionDir } = useRuntimeConfig(event)

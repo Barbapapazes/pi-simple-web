@@ -7,13 +7,16 @@ export function groupToolResults(entries: ConversationEntry[]): ConversationEntr
   const grouped = entries.map(entry => ({ ...entry, blocks: entry.blocks.map(block => ({ ...block })) }))
   for (const entry of grouped) {
     for (const block of entry.blocks) {
-      if (block.type === 'toolCall' && block.toolCallId) calls.set(block.toolCallId, block)
+      if (block.type === 'toolCall' && block.toolCallId)
+        calls.set(block.toolCallId, block)
     }
   }
-  return grouped.filter(entry => {
-    if (!entry.role.startsWith('tool:') || !entry.toolCallId) return true
+  return grouped.filter((entry) => {
+    if (!entry.role.startsWith('tool:') || !entry.toolCallId)
+      return true
     const call = calls.get(entry.toolCallId)
-    if (!call) return true
+    if (!call)
+      return true
     call.result = { blocks: entry.blocks, isError: entry.isError, diff: entry.diff }
     return false
   })

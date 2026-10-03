@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { groupToolResults } from '#conversations/shared/utils/conversation'
-import { truncateTitle } from '#shared/utils/title'
 import { useSession } from '#sessions/app/composables/useSession'
+import { truncateTitle } from '#shared/utils/title'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
@@ -12,15 +12,19 @@ const { data: session, error, isPending, isLoading, refetch } = useSession(id)
 let refreshInterval: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
   refreshInterval = setInterval(() => {
-    if (!isLoading.value) void refetch()
+    if (!isLoading.value)
+      void refetch()
   }, 5000)
 })
 onBeforeUnmount(() => clearInterval(refreshInterval))
 const title = computed(() => truncateTitle(session.value?.name || session.value?.firstMessage || 'Conversation'))
 const status = computed(() => isResponding.value && conversation.value.status ? conversation.value.status : session.value?.status)
-watch(isResponding, (busy, wasBusy) => { if (wasBusy && !busy) void refetch() })
+watch(isResponding, (busy, wasBusy) => {
+  if (wasBusy && !busy)
+    void refetch()
+})
 const visibleEntries = computed(() => groupToolResults(liveBranch.value ?? session.value?.branch ?? []).filter(entry =>
-  entry.type === 'message' && entry.role !== 'system'
+  (entry.type === 'message' && entry.role !== 'system')
   || ['compaction', 'branch_summary', 'custom_message'].includes(entry.type),
 ))
 const { viewport, content, followTail, onScroll, jumpToLatest } = useConversationScroll(visibleEntries)
@@ -50,11 +54,15 @@ useHead({ title: () => `${session.value?.name || 'Session'} · Autobots` })
             <USkeleton class="ms-auto h-24 w-3/4 rounded-xl" />
           </div>
           <template v-else-if="session || liveBranch">
-            <p v-if="session" class="mb-8 text-center text-xs text-dimmed">{{ new Date(session.created).toLocaleDateString() }}</p>
+            <p v-if="session" class="mb-8 text-center text-xs text-dimmed">
+              {{ new Date(session.created).toLocaleDateString() }}
+            </p>
             <div v-if="visibleEntries.length" class="space-y-5">
               <ConversationEntry v-for="entry in visibleEntries" :key="entry.id" :entry="entry" :busy="isResponding" />
             </div>
-            <p v-else class="text-center text-sm text-muted">Send a message to begin.</p>
+            <p v-else class="text-center text-sm text-muted">
+              Send a message to begin.
+            </p>
           </template>
         </div>
       </div>
