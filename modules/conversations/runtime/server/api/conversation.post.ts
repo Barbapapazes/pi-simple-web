@@ -2,6 +2,7 @@ import type { AgentSession } from '@earendil-works/pi-coding-agent'
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
 import { conversationEntry, listSessions } from '../../../../sessions/runtime/server/services/sessions'
 import { liveStatus, workspaceStatus } from '../../../../sessions/runtime/server/services/status'
+import { createConversationResourceLoader, disposeConversationSession } from '../services/agent'
 import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../services/conversation'
 
 // Only one SDK session writes a given file; additional input uses that live run.
@@ -57,12 +58,18 @@ export default defineEventHandler(async (event) => {
     const sessionManager = info
       ? SessionManager.open(info.path, sessionDir)
       : sessionDir ? SessionManager.create(cwd, sessionDir) : undefined
-    ;({ session } = await createAgentSession({ cwd, sessionManager }))
+    const resourceLoader = await createConversationResourceLoader(cwd)
+    ;({ session } = await createAgentSession({ cwd, sessionManager, resourceLoader }))
     await session.bindExtensions({})
   }
   catch (error) {
-    session?.dispose()
-    activeSessions.delete(lock)
+    try {
+      if (session)
+        await disposeConversationSession(session)
+    }
+    finally {
+      activeSessions.delete(lock)
+    }
     throw error
   }
 
@@ -91,7 +98,7 @@ export default defineEventHandler(async (event) => {
     finally {
       activeRuns.delete(agent.sessionId)
       try {
-        agent.dispose()
+        await disposeConversationSession(agent)
       }
       finally {
         activeSessions.delete(lock)

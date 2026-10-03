@@ -17,7 +17,7 @@ pnpm dev
 
 ## Session storage
 
-The server-side `@earendil-works/pi-coding-agent` SDK discovers sessions under the server user's `~/.pi/agent/sessions/`. Browsing does not require credentials or a running agent. Sending messages requires a configured Pi model and credentials, just like the CLI.
+The server-side `@earendil-works/pi-coding-agent` SDK discovers sessions under the server user's `~/.pi/agent/sessions/`. Browsing does not require credentials or a running agent. Sending messages requires a configured Pi model and credentials, just like the CLI. Web sessions load Pi's built-in MCP, codemode, and tool-search extensions, reading servers from the server user's `~/.pi/agent/mcp.json` (or `PI_CODING_AGENT_DIR`) and the trusted workspace's `.pi/mcp.json`. Configure servers and authentication through Pi's CLI; no separate web MCP configuration is needed. Built-in extension exclusions and replacement extensions are honored. MCP connections are closed when each background conversation run finishes.
 
 For a custom directory containing `.jsonl` session files directly (such as a Pi `--session-dir` directory):
 
