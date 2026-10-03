@@ -19,7 +19,7 @@ test('chat accepts only non-empty, bounded messages and valid IDs', () => {
   }
 })
 
-test('new chats accept absolute workspace paths, but existing sessions cannot change workspace', () => {
+test('new conversations accept absolute workspace paths, but existing sessions cannot change workspace', () => {
   const cwd = join(tmpdir(), 'project')
   assert.deepEqual(validateConversationInput({ message: 'Hello', cwd: `  ${cwd}  ` }), { message: 'Hello', id: undefined, cwd })
   for (const workspace of ['', '   ', 'relative/path', '~/project', 123, '/bad\0path', `/${'x'.repeat(4096)}`]) {

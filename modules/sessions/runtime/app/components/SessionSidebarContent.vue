@@ -21,7 +21,7 @@ const groups = computed(() => {
 </script>
 
 <template>
-  <UButton to="/new" color="primary" class="shrink-0" icon="i-lucide-plus" :label="collapsed ? undefined : 'New chat'" :block="!collapsed" :square="collapsed" aria-label="New chat" />
+  <UButton to="/new" color="primary" class="shrink-0" icon="i-lucide-plus" :label="collapsed ? undefined : 'New conversation'" :block="!collapsed" :square="collapsed" aria-label="New conversation" />
   <UNavigationMenu
     :items="[{ label: 'All sessions', icon: 'i-lucide-layout-dashboard', to: '/', exact: true }]"
     :collapsed="collapsed"

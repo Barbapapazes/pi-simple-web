@@ -182,10 +182,10 @@ useHead({ title: 'Sessions · Autobots' })
             {{ sessions?.length ? 'No matching conversations' : 'No sessions yet' }}
           </h3>
           <p class="mt-2 max-w-sm text-sm text-muted">
-            {{ sessions?.length ? 'Try another search or workspace filter.' : 'Start a new chat to work with Pi in your local workspace.' }}
+            {{ sessions?.length ? 'Try another search or workspace filter.' : 'Start a new conversation to work with Pi in your local workspace.' }}
           </p>
           <UButton v-if="!sessions?.length" to="/new" icon="i-lucide-plus" class="mt-4">
-            New chat
+            New conversation
           </UButton>
           <UButton v-if="sessions?.length" class="mt-4" color="neutral" variant="outline" @click="search = ''; workspace = ''">
             Clear filters
