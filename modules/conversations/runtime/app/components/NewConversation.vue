@@ -19,7 +19,7 @@ useHead({ title: 'New conversation · Autobots' })
     <template #body>
       <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 py-12">
         <div class="space-y-4">
-          <span class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-3xl font-semibold text-primary">π</span>
+          <img src="/pi.svg" alt="Pi" width="48" height="48" class="size-12">
           <h1 class="text-3xl font-semibold tracking-tight text-highlighted sm:text-4xl">
             What can we work on?
           </h1>
