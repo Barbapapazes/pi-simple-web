@@ -10,10 +10,6 @@ const activeSessions = new Set<string>()
 const activeRuns = new Map<string, ReturnType<typeof createConversationRun>>()
 
 export default defineEventHandler(async (event) => {
-  const origin = getHeader(event, 'origin')
-  if (origin && origin !== getRequestURL(event).origin) {
-    throw createError({ statusCode: 403, statusMessage: 'Cross-origin conversation requests are not allowed.' })
-  }
   if (!getHeader(event, 'content-type')?.startsWith('application/json')) {
     throw createError({ statusCode: 415, statusMessage: 'Expected application/json.' })
   }

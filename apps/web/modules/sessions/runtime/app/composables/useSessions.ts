@@ -3,9 +3,10 @@ import type { SessionSummary } from '@pi-simple-web/shared/sessions/types/sessio
 export function useSessions() {
   const search = useState('session-search', () => '')
   const workspace = useState('session-workspace', () => '')
+  const apiBase = useRuntimeConfig().public.apiBase
   const query = useQuery({
     key: ['sessions'],
-    query: () => $fetch<SessionSummary[]>('/api/sessions'),
+    query: () => $fetch<SessionSummary[]>('/api/sessions', { baseURL: apiBase }),
   })
   const workspaces = computed(() => [...new Set(query.data.value?.map(session => session.cwd) || [])].sort())
   const workspaceOptions = computed(() => [

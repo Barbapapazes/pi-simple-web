@@ -12,7 +12,8 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
-    // Server-only: browsers always use the web app's same-origin /api proxy.
-    apiBase: 'http://127.0.0.1:3001',
+    public: {
+      apiBase: 'http://127.0.0.1:3001',
+    },
   },
 })

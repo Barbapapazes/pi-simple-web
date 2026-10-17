@@ -17,7 +17,7 @@ pnpm dev
 
 This starts the Nuxt web app on `http://127.0.0.1:3000` and the Nuxt API on `http://127.0.0.1:3001`. Run either separately with `pnpm --filter @pi-simple-web/web dev` or `pnpm --filter @pi-simple-web/api dev`.
 
-The browser continues to use same-origin `/api/*` requests. The web app streams them to the API using server-only `NUXT_API_BASE` (default `http://127.0.0.1:3001`). Set it to the API's reachable HTTP(S) address when deploying separately; no frontend rebuild or browser CORS configuration is needed. Both apps remain Nuxt applications. The API owns all Pi credentials, sessions, workspaces, and agent processes; the frontend does not need Pi installed or configured.
+The browser calls the API directly using public runtime configuration `NUXT_PUBLIC_API_BASE` (default `http://127.0.0.1:3001`, without `/api`). There is no web API proxy. The API permits `http://127.0.0.1:3000` and `http://localhost:3000` by default. Set `NUXT_ALLOWED_ORIGINS` on the API to a comma-separated list of exact frontend origins (scheme, host, port) for other deployments. Both apps remain Nuxt applications. The API owns all Pi credentials, sessions, workspaces, and agent processes; the frontend does not need Pi installed or configured.
 
 ## Session storage
 
@@ -43,12 +43,12 @@ Build both apps in CI with `pnpm build`, or independently with `pnpm build:web` 
 # API host, running as the user with Pi configured:
 HOST=127.0.0.1 PORT=3001 node apps/api/.output/server/index.mjs
 
-# Web host (use the API address reachable from this host):
-HOST=127.0.0.1 PORT=3000 NUXT_API_BASE=http://127.0.0.1:3001 \
+# Web host (use the API address reachable from browsers and this host):
+HOST=127.0.0.1 PORT=3000 NUXT_PUBLIC_API_BASE=http://127.0.0.1:3001 \
   node apps/web/.output/server/index.mjs
 ```
 
-`NUXT_API_BASE` is the API origin without `/api`. It is read at server startup, not embedded in the browser bundle. When deploying on different hosts, use a private network or authenticated TLS tunnel for the API connection and bind the API to the appropriate private interface. **Neither app has authentication**: protect both behind access control and do not expose the API publicly. Same-origin request checks remain enabled, and the web proxy preserves streaming and queued conversation input.
+`NUXT_PUBLIC_API_BASE` must be reachable from browsers **and** the web server (SSR). It is public runtime configuration, read at web server startup without rebuilding. Set `NUXT_ALLOWED_ORIGINS=https://chat.example.com` on the API for a frontend at that origin; use HTTPS for both when the frontend is HTTPS. SSE and queued input go directly to the API. **Neither app has authentication**: protect both behind compatible access control, including preflight requests. CORS is not authentication and does not restrict non-browser clients. Do not expose the API publicly without access control.
 
 ### Download prebuilt bundles
 
@@ -57,7 +57,7 @@ The **Build production artifact** GitHub Actions workflow builds on pushes to `m
 - `pi-simple-web-linux-ARCH.tar.gz`: frontend server and client assets.
 - `pi-simple-api-linux-ARCH.tar.gz`: API server and runtime dependencies, including Pi's QuickJS WASM.
 
-CI runs lint, unit tests, and type checks for both apps, builds on native runners, then moves both bundles outside the checkout. Smoke tests exercise the standalone API and web app, same-origin protection, streaming, queued input, and a real codemode tool call without model credentials.
+CI runs lint, unit tests, and type checks for both apps, builds on native runners, then moves both bundles outside the checkout. Smoke tests exercise the standalone API and web app, CORS allowlisting and preflights, and a real codemode tool call without model credentials.
 
 On Linux x64 or ARM64 with Node.js 24 and an authenticated [GitHub CLI](https://cli.github.com/):
 
@@ -78,7 +78,7 @@ tar -xzf "pi-simple-web-linux-$ARCH.tar.gz" -C web
 tar -xzf "pi-simple-api-linux-$ARCH.tar.gz" -C api
 HOST=127.0.0.1 PORT=3001 node api/.output/server/index.mjs
 # In another terminal (or on the frontend host):
-HOST=127.0.0.1 PORT=3000 NUXT_API_BASE=http://127.0.0.1:3001 \
+HOST=127.0.0.1 PORT=3000 NUXT_PUBLIC_API_BASE=http://127.0.0.1:3001 \
   node web/.output/server/index.mjs
 ```
 
@@ -93,12 +93,12 @@ From the directory containing the extracted `api/` and `web/` bundles, with PM2 
 ```bash
 HOST=127.0.0.1 PORT=3001 NODE_ENV=production \
   pm2 start api/.output/server/index.mjs --name pi-simple-api --cwd "$PWD"
-HOST=127.0.0.1 PORT=4001 NODE_ENV=production NUXT_API_BASE=http://127.0.0.1:3001 \
+HOST=127.0.0.1 PORT=4001 NODE_ENV=production NUXT_PUBLIC_API_BASE=http://127.0.0.1:3001 \
   pm2 start web/.output/server/index.mjs --name pi-simple-web --cwd "$PWD"
 pm2 save
 ```
 
-For separate hosts, run only the corresponding process and set the web host's `NUXT_API_BASE` accordingly. When migrating an existing single-app PM2 process, stop and delete its old entry before starting the new paths.
+For separate hosts, set the web host's `NUXT_PUBLIC_API_BASE` to the browser-reachable API origin and the API's `NUXT_ALLOWED_ORIGINS` to the frontend origin. For the PM2 example on web port 4001, set `NUXT_ALLOWED_ORIGINS=http://127.0.0.1:4001` on the API. When migrating an existing single-app PM2 process, stop and delete its old entry before starting the new paths.
 
 ## Checks
 
@@ -115,7 +115,7 @@ pnpm build
 
 This pnpm workspace contains:
 
-- `apps/web/`: the Nuxt frontend, application shell, route wrappers, public assets, UI-only sessions/conversations modules, and streaming `/api/*` proxy.
+- `apps/web/`: the Nuxt frontend, application shell, route wrappers, public assets, UI-only sessions/conversations modules..
 - `apps/api/`: the server-only Nuxt application, API handlers, session services, agent runs, and input queues. Local modules register the original API routes.
 - `packages/shared/`: framework-independent conversation/session contracts, presentation helpers, Markdown options, and keyboard shortcuts. Both apps import explicit `@pi-simple-web/shared/*` exports; this package has no Pi SDK dependency.
 - `tests/`: existing behavior tests, running directly with Node.

@@ -14,6 +14,7 @@ export function useConversation() {
     queue: { steering: [], followUp: [] } as ConversationQueue,
   }))
   const refreshSessions = useSessionRefresh()
+  const apiBase = useRuntimeConfig().public.apiBase.replace(/\/$/, '')
 
   async function send(message: string, id?: string, cwd?: string) {
     if (state.value.busy || !message.trim())
@@ -21,7 +22,7 @@ export function useConversation() {
     state.value = { id: id || '', busy: true, error: '', branch: null, status: null, queue: { steering: [], followUp: [] } }
     let completed = false
     try {
-      const response = await fetch('/api/conversations', {
+      const response = await fetch(`${apiBase}/api/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, id, cwd }),
@@ -90,7 +91,7 @@ export function useConversation() {
       return false
     state.value.error = ''
     try {
-      await $fetch('/api/conversations', { method: 'POST', body: { message, id, streamingBehavior } })
+      await $fetch('/api/conversations', { baseURL: apiBase, method: 'POST', body: { message, id, streamingBehavior } })
       return true
     }
     catch (error) {

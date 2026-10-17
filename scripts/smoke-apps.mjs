@@ -11,7 +11,6 @@ import { setTimeout } from 'node:timers/promises'
 const bundle = resolve(process.argv[2])
 const directory = await mkdtemp(join(tmpdir(), 'pi-apps-'))
 const children = []
-const servers = []
 async function port() {
   const server = createServer()
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -42,91 +41,53 @@ async function start(app, extra) {
 }
 try {
   assert.equal(existsSync(join(bundle, 'web/.output/server/node_modules/@earendil-works/pi-coding-agent')), false)
-  const api = await start('api', { NUXT_PI_SESSION_DIR: directory, PI_CODING_AGENT_DIR: directory })
-  const web = await start('web', { NUXT_API_BASE: api })
+  const origin = 'https://chat.example.com'
+  const api = await start('api', { NUXT_PI_SESSION_DIR: directory, PI_CODING_AGENT_DIR: directory, NUXT_ALLOWED_ORIGINS: origin })
+  const web = await start('web', { NUXT_PUBLIC_API_BASE: api })
   const home = await fetch(web)
   assert.equal(home.status, 200)
-  assert.match(await home.text(), /<html/)
+  const html = await home.text()
+  assert.match(html, /<html/)
+  assert.ok(html.includes(api))
   assert.equal((await fetch(`${web}/new`)).status, 200)
   assert.equal((await fetch(`${web}/pi.svg`)).status, 200)
   const icons = await fetch(`${web}/api/_nuxt_icon/lucide.json?icons=refresh-cw`)
   assert.equal(icons.status, 200)
   assert.ok((await icons.json()).icons['refresh-cw'])
-  for (const base of [api, web]) {
-    const sessions = await fetch(`${base}/api/sessions`)
-    assert.equal(sessions.status, 200)
-    assert.deepEqual(await sessions.json(), [])
-    assert.equal((await fetch(`${base}/api/sessions/missing`)).status, 404)
-    assert.equal((await fetch(`${base}/api/conversations`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'origin': base },
-      body: JSON.stringify({ message: '' }),
-    })).status, 400)
-    assert.equal((await fetch(`${base}/api/conversations`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'origin': 'https://untrusted.example' },
-      body: JSON.stringify({ message: 'do not run' }),
-    })).status, 403)
-  }
-
-  // Exercise the production proxy with a deterministic SSE upstream, no model
-  // credentials required. The first event must arrive before the stream ends.
-  const upstream = createServer(async (req, res) => {
-    // Server rendering loads the sidebar's session query before SSE is tested.
-    if (req.url === '/api/sessions') {
-      res.setHeader('content-type', 'application/json')
-      res.end('[]')
-      return
-    }
-    assert.equal(req.url, '/api/conversations')
-    assert.equal(req.headers.origin, `http://${req.headers.host}`)
-    let body = ''
-    for await (const chunk of req)
-      body += chunk
-    const input = JSON.parse(body)
-    if (input.streamingBehavior) {
-      res.setHeader('content-type', 'application/json')
-      res.end(JSON.stringify({ disposition: input.streamingBehavior }))
-      return
-    }
-    assert.equal(input.message, 'stream fixture')
-    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
-    res.write('data: {"type":"started","id":"fixture","branch":[]}\n\n')
-    await setTimeout(1000)
-    res.end('data: {"type":"done","branch":[]}\n\n')
-  })
-  servers.push(upstream)
-  await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
-  const streamWeb = await start('web', { NUXT_API_BASE: `http://127.0.0.1:${upstream.address().port}` })
-  const response = await fetch(`${streamWeb}/api/conversations`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'origin': streamWeb },
-    body: JSON.stringify({ message: 'stream fixture' }),
-  })
-  assert.equal(response.status, 200)
-  assert.match(response.headers.get('content-type'), /text\/event-stream/)
-  const reader = response.body.getReader()
-  const first = new TextDecoder().decode((await reader.read()).value)
-  assert.match(first, /started/)
-  assert.doesNotMatch(first, /done/)
-  let rest = ''
-  for (;;) {
-    const chunk = await reader.read()
-    if (chunk.done)
-      break
-    rest += new TextDecoder().decode(chunk.value)
-  }
-  assert.match(rest, /done/)
-  for (const streamingBehavior of ['steer', 'followUp']) {
-    const queued = await fetch(`${streamWeb}/api/conversations`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'origin': streamWeb },
-      body: JSON.stringify({ id: 'fixture', message: 'queued', streamingBehavior }),
+  const sessions = await fetch(`${api}/api/sessions`, { headers: { origin } })
+  assert.equal(sessions.status, 200)
+  assert.equal(sessions.headers.get('access-control-allow-origin'), origin)
+  assert.deepEqual(await sessions.json(), [])
+  assert.equal((await fetch(`${api}/api/sessions/missing`)).status, 404)
+  for (const path of ['/api/sessions', '/api/conversations']) {
+    const preflight = await fetch(`${api}${path}`, {
+      method: 'OPTIONS',
+      headers: {
+        'origin': origin,
+        'access-control-request-method': path.endsWith('sessions') ? 'GET' : 'POST',
+        'access-control-request-headers': 'content-type',
+      },
     })
-    assert.equal(queued.status, 200)
-    assert.deepEqual(await queued.json(), { disposition: streamingBehavior })
+    assert.equal(preflight.status, 204)
+    assert.equal(preflight.headers.get('access-control-allow-origin'), origin)
+    assert.match(preflight.headers.get('access-control-allow-headers'), /Content-Type/i)
+    for (const method of ['GET', 'OPTIONS']) {
+      const denied = await fetch(`${api}${path}`, {
+        method,
+        headers: { 'origin': 'https://untrusted.example', 'access-control-request-method': 'POST' },
+      })
+      assert.equal(denied.status, 403)
+      assert.equal(denied.headers.get('access-control-allow-origin'), null)
+    }
   }
-  console.log('Standalone API, frontend, origin protection, SSE, and queued input smoke tests passed.')
+  const invalid = await fetch(`${api}/api/conversations`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin },
+    body: JSON.stringify({ message: '' }),
+  })
+  assert.equal(invalid.status, 400)
+  assert.equal(invalid.headers.get('access-control-allow-origin'), origin)
+  console.log('Standalone API, frontend, and CORS smoke tests passed.')
 }
 finally {
   await Promise.all(children.map(child => new Promise((resolve) => {
@@ -135,6 +96,5 @@ finally {
     child.once('exit', resolve)
     child.kill()
   })))
-  await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))))
   await rm(directory, { recursive: true, force: true })
 }
