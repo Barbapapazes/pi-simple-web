@@ -83,8 +83,10 @@ test('streams user, assistant deltas and tools, then returns the authoritative s
   }
   const events: ConversationEvent[] = []
   await streamConversation(fake, 'Hi', event => events.push(event))
-  const partial = events.find(event => event.type === 'conversation' && event.branch.at(-1)?.blocks[0]?.text === 'Hello')
+  const partial = events.find(event => event.type === 'message' && event.entry.blocks[0]?.text === 'Hello')
   assert.ok(partial)
+  assert.equal(events.some(event => event.type === 'conversation'), false)
+  assert.ok(events.filter(event => event.type === 'message').every(event => !('branch' in event)))
   const done = events.at(-1)
   assert.equal(done?.type, 'done')
   if (done?.type !== 'done')
@@ -93,6 +95,45 @@ test('streams user, assistant deltas and tools, then returns the authoritative s
   assert.equal(done.branch[1]?.blocks[0]?.text, 'Hi')
   assert.ok(done.branch.every(entry => !entry.id.startsWith('live-')))
   assert.equal(unsubscribed, true)
+})
+
+test('batches rapid token updates without serializing historical branches', async () => {
+  const manager = SessionManager.inMemory('/test')
+  manager.appendMessage({ role: 'user', content: 'Long historical message'.repeat(1000), timestamp: 1 })
+  let listener: ((event: AgentSessionEvent) => void) | undefined
+  const events: ConversationEvent[] = []
+  await streamConversation({
+    sessionManager: manager,
+    subscribe(callback) {
+      listener = callback
+      return () => {}
+    },
+    async prompt() {
+      const assistant = {
+        role: 'assistant' as const,
+        content: [{ type: 'text' as const, text: '' }],
+        api: 'openai-completions' as const,
+        provider: 'test',
+        model: 'test',
+        timestamp: 2,
+        stopReason: 'stop' as const,
+        usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      }
+      listener!({ type: 'message_start', message: assistant })
+      for (let i = 1; i <= 1000; i++) {
+        assistant.content[0]!.text = 'x'.repeat(i)
+        listener!({ type: 'message_update', message: assistant, assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'x', partial: assistant } })
+      }
+      manager.appendMessage(assistant)
+      listener!({ type: 'message_end', message: assistant })
+      return 'started'
+    },
+  }, 'Hi', event => events.push(event))
+  const updates = events.filter(event => event.type === 'message')
+  assert.equal(updates.length, 2)
+  assert.equal(updates.at(-1)?.entry.blocks[0]?.text?.length, 1000)
+  assert.ok(updates.every(event => !JSON.stringify(event).includes('Long historical')))
+  assert.equal(events.at(-1)?.type, 'done')
 })
 
 test('live status is read after Pi persists message_end, not before it', async () => {

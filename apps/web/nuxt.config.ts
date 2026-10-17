@@ -1,4 +1,5 @@
 export default defineNuxtConfig({
+  ssr: false,
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@comark/nuxt', '@nuxt/ui', '@pinia/nuxt', '@pinia/colada-nuxt'],

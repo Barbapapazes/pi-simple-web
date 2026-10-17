@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
   contentClass?: string
 }>(), { preformatted: false, markdown: true, contentClass: 'text-sm leading-7' })
 const expanded = ref(false)
-const preview = computed(() => previewLines(props.text, props.preview || Number.MAX_SAFE_INTEGER, props.tail))
+const preview = computed(() => props.preview ? previewLines(props.text, props.preview, props.tail) : { text: props.text, hidden: 0 })
 const displayed = computed(() => expanded.value || !props.preview ? props.text : preview.value.text)
 </script>
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -51,13 +51,60 @@ try {
   assert.ok(html.includes(api))
   assert.equal((await fetch(`${web}/new`)).status, 200)
   assert.equal((await fetch(`${web}/pi.svg`)).status, 200)
-  const icons = await fetch(`${web}/api/_nuxt_icon/lucide.json?icons=refresh-cw`)
-  assert.equal(icons.status, 200)
-  assert.ok((await icons.json()).icons['refresh-cw'])
+  // In client-only builds Nuxt Icon bundles the icons locally, without this
+  // SSR server endpoint. Keep the endpoint assertion for server-rendered builds.
+  if (!html.includes('data-ssr="false"')) {
+    const icons = await fetch(`${web}/api/_nuxt_icon/lucide.json?icons=refresh-cw`)
+    assert.equal(icons.status, 200)
+    assert.ok((await icons.json()).icons['refresh-cw'])
+  }
   const sessions = await fetch(`${api}/api/sessions`, { headers: { origin } })
   assert.equal(sessions.status, 200)
   assert.equal(sessions.headers.get('access-control-allow-origin'), origin)
-  assert.deepEqual(await sessions.json(), [])
+  assert.deepEqual(await sessions.json(), { items: [], total: 0, nextOffset: null, workspaces: [] })
+  const timestamp = '2026-01-01T00:00:00.000Z'
+  const sessionPath = join(directory, 'smoke.jsonl')
+  await writeFile(sessionPath, `${[
+    { type: 'session', version: 3, id: 'smoke', timestamp, cwd: directory },
+    { type: 'message', id: 'first', parentId: null, timestamp, message: { role: 'user', content: 'Smoke test', timestamp: 1000 } },
+  ].map(entry => JSON.stringify(entry)).join('\n')}\n`)
+  await writeFile(join(directory, 'other.jsonl'), `${[
+    { type: 'session', version: 3, id: 'other', timestamp, cwd: '/other' },
+    { type: 'message', id: 'other-first', parentId: null, timestamp, message: { role: 'user', content: 'Other message', timestamp: 2000 } },
+  ].map(entry => JSON.stringify(entry)).join('\n')}\n`)
+  const page = await fetch(`${api}/api/sessions?limit=1`).then(response => response.json())
+  assert.equal(page.items.length, 1)
+  assert.equal(page.total, 2)
+  assert.equal(page.nextOffset, 1)
+  const last = await fetch(`${api}/api/sessions?limit=1&offset=1`).then(response => response.json())
+  assert.equal(last.items.length, 1)
+  assert.equal(last.nextOffset, null)
+  assert.notEqual(page.items[0].id, last.items[0].id)
+  const filtered = await fetch(`${api}/api/sessions?search=Smoke`).then(response => response.json())
+  assert.deepEqual(filtered.items.map(item => item.id), ['smoke'])
+  assert.equal((await fetch(`${api}/api/sessions?limit=101`)).status, 400)
+  const detailResponse = await fetch(`${api}/api/sessions/smoke`, { headers: { origin } })
+  assert.equal(detailResponse.status, 200)
+  const detail = await detailResponse.json()
+  assert.equal(detail.branch.length, 1)
+  assert.equal('path' in detail, false)
+  const etag = detailResponse.headers.get('etag')
+  assert.ok(etag)
+  assert.match(detailResponse.headers.get('access-control-expose-headers'), /ETag/i)
+  const unchanged = await fetch(`${api}/api/sessions/smoke`, { headers: { origin, 'if-none-match': etag } })
+  assert.equal(unchanged.status, 304)
+  const version = await fetch(`${api}/api/sessions/smoke/version`).then(response => response.json())
+  assert.equal(version.version, detail.version)
+  const metrics = await fetch(`${api}/api/sessions/metrics`).then(response => response.json())
+  assert.equal(metrics.sessions, 2)
+  assert.equal(metrics.messages, 2)
+  await appendFile(sessionPath, `${JSON.stringify({ type: 'message', id: 'second', parentId: 'first', timestamp, message: { role: 'user', content: 'Changed', timestamp: 3000 } })}\n`)
+  const changedVersion = await fetch(`${api}/api/sessions/smoke/version`).then(response => response.json())
+  assert.notEqual(changedVersion.version, version.version)
+  const changedResponse = await fetch(`${api}/api/sessions/smoke`, { headers: { 'if-none-match': etag } })
+  assert.equal(changedResponse.status, 200)
+  assert.equal((await changedResponse.json()).branch.length, 2)
+  assert.equal((await fetch(`${api}/api/conversations/smoke/events`)).status, 204)
   assert.equal((await fetch(`${api}/api/sessions/missing`)).status, 404)
   for (const path of ['/api/sessions', '/api/conversations']) {
     const preflight = await fetch(`${api}${path}`, {
@@ -65,7 +112,7 @@ try {
       headers: {
         'origin': origin,
         'access-control-request-method': path.endsWith('sessions') ? 'GET' : 'POST',
-        'access-control-request-headers': 'content-type',
+        'access-control-request-headers': 'content-type, if-none-match',
       },
     })
     assert.equal(preflight.status, 204)
@@ -87,7 +134,7 @@ try {
   })
   assert.equal(invalid.status, 400)
   assert.equal(invalid.headers.get('access-control-allow-origin'), origin)
-  console.log('Standalone API, frontend, and CORS smoke tests passed.')
+  console.log('Standalone API, frontend, pagination, detail cache/ETag, version checks, idle streams, and CORS smoke tests passed.')
 }
 finally {
   await Promise.all(children.map(child => new Promise((resolve) => {

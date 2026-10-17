@@ -8,6 +8,7 @@ export interface ConversationQueue { steering: string[], followUp: string[] }
 export type ConversationEvent
   = | { type: 'queue', queue: ConversationQueue }
     | { type: 'started', id: string, cwd: string, branch: ConversationEntry[], status?: SessionStatus }
+    | { type: 'message', entry: ConversationEntry }
     | { type: 'conversation', branch: ConversationEntry[], status?: SessionStatus }
     | { type: 'status', status: SessionStatus }
     | { type: 'error', message: string }

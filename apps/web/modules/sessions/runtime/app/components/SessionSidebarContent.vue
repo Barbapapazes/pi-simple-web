@@ -9,7 +9,7 @@ function preloadSession(id: string) {
     // Prefetch failures should not interrupt navigation; the page handles errors.
   })
 }
-const { data: sessions, filteredSessions, search, error, isPending, isLoading, refetch } = useSessions()
+const { data: sessions, filteredSessions, search, workspace, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
 const groups = computed(() => {
   const named = filteredSessions.value.filter(session => session.name)
   const other = filteredSessions.value.filter(session => !session.name)
@@ -40,10 +40,10 @@ const groups = computed(() => {
     <p v-if="error" class="px-2 text-xs text-error" role="alert">
       Unable to load sessions. Try refreshing.
     </p>
-    <p v-else-if="isPending" class="px-2 text-xs text-muted" role="status">
+    <p v-if="isPending && !error" class="px-2 text-xs text-muted" role="status">
       Loading sessions…
     </p>
-    <nav v-else aria-label="Session history" class="min-h-0 flex-1 space-y-6 overflow-y-auto">
+    <nav v-if="!isPending || sessions.length" aria-label="Session history" class="min-h-0 flex-1 space-y-6 overflow-y-auto">
       <div v-for="group in groups" :key="group.label">
         <h2 v-if="group.label !== 'Conversations'" class="mb-2 px-2 text-xs font-medium text-muted">
           {{ group.label }}
@@ -71,8 +71,9 @@ const groups = computed(() => {
         </div>
       </div>
       <p v-if="!groups.length" class="px-2 text-xs text-muted">
-        {{ sessions?.length ? 'No matching sessions.' : 'No sessions yet.' }}
+        {{ search || workspace ? 'No matching sessions.' : 'No sessions yet.' }}
       </p>
+      <SessionLoadMore :has-more="hasNextPage" :loading="isLoading" :failed="!!error" @load="loadNextPage({ cancelRefetch: false })" />
     </nav>
   </template>
 </template>

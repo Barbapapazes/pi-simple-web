@@ -73,21 +73,65 @@ export async function resolveConversationCwd(cwd?: string): Promise<string> {
 // The browser stream is only an observer; disconnecting must not stop the agent.
 export function createConversationEmitter(stream: { push: (data: string) => Promise<unknown>, onClosed: (callback: () => void) => unknown }) {
   let closed = false
-  stream.onClosed(() => {
+  let writing = false
+  const pending = new Map<string, ConversationEvent>()
+  const waiters = new Set<() => void>()
+  function settle() {
+    for (const resolve of waiters)
+      resolve()
+    waiters.clear()
+  }
+  function stop() {
     closed = true
-  })
-  return (message: ConversationEvent) => {
-    if (closed)
-      return
+    pending.clear()
+    settle()
+  }
+  stream.onClosed(stop)
+  async function pump() {
+    writing = true
     try {
-      void stream.push(JSON.stringify(message)).catch(() => {
-        closed = true
-      })
+      while (pending.size) {
+        if (closed)
+          break
+        const [key, message] = pending.entries().next().value!
+        pending.delete(key)
+        // Await backpressure. Slow observers retain only the latest unsent
+        // version of each message/status, not a queue of serialized histories.
+        await stream.push(JSON.stringify(message))
+      }
     }
     catch {
-      closed = true
+      stop()
+    }
+    finally {
+      writing = false
+      settle()
     }
   }
+  function emit(message: ConversationEvent) {
+    if (closed)
+      return
+    if (message.type === 'done') {
+      // The authoritative final snapshot supersedes unsent deltas and queues.
+      for (const key of pending.keys()) {
+        if (key !== 'error')
+          pending.delete(key)
+      }
+    }
+    const key = message.type === 'message' ? `message:${message.entry.id}` : message.type
+    pending.set(key, message)
+    if (!writing)
+      void pump()
+  }
+  return Object.assign(emit, {
+    drain() {
+      if (!writing || closed)
+        return Promise.resolve()
+      return new Promise<void>((resolve) => {
+        waiters.add(resolve)
+      })
+    },
+  })
 }
 
 export async function streamConversation(
@@ -97,10 +141,17 @@ export async function streamConversation(
   getStatus?: () => SessionStatus,
   finish?: () => Promise<void>,
 ) {
-  const base = session.sessionManager.getBranch().map(conversationEntry)
-  const live = new Map<string, ReturnType<typeof conversationEntry>>()
   let currentId = ''
   let sequence = 0
+  const pending = new Map<string, Parameters<typeof conversationEntry>[0]>()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  function flush() {
+    clearTimeout(timer)
+    timer = undefined
+    for (const entry of pending.values())
+      emit({ type: 'message', entry: conversationEntry(entry) })
+    pending.clear()
+  }
   const unsubscribe = session.subscribe((event) => {
     if (event.type === 'queue_update') {
       emit({ type: 'queue', queue: { steering: [...event.steering], followUp: [...event.followUp] } })
@@ -114,14 +165,19 @@ export async function streamConversation(
     if (event.type === 'message_start')
       currentId = `live-${++sequence}`
     const timestamp = new Date(event.message.timestamp).toISOString()
-    live.set(currentId, conversationEntry({
-      type: 'message',
+    const entry = {
+      type: 'message' as const,
       id: currentId,
       parentId: null,
       timestamp,
       message: event.message,
-    }))
-    emit({ type: 'conversation', branch: [...base, ...live.values()] })
+    }
+    pending.set(currentId, entry)
+    // Batch token updates, but never delay message boundaries or final state.
+    if (event.type === 'message_update')
+      timer ??= setTimeout(flush, 40)
+    else
+      flush()
   })
   try {
     await session.prompt(message)
@@ -130,8 +186,13 @@ export async function streamConversation(
     emit({ type: 'error', message: error instanceof Error ? error.message : 'Pi could not complete this message.' })
   }
   finally {
-    await finish?.()
-    unsubscribe()
-    emit({ type: 'done', branch: session.sessionManager.getBranch().map(conversationEntry), ...(getStatus ? { status: getStatus() } : {}) })
+    try {
+      await finish?.()
+    }
+    finally {
+      unsubscribe()
+      flush()
+      emit({ type: 'done', branch: session.sessionManager.getBranch().map(conversationEntry), ...(getStatus ? { status: getStatus() } : {}) })
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readSession } from '../../services/sessions'
 
 export default defineEventHandler(async (event) => {
@@ -9,6 +10,13 @@ export default defineEventHandler(async (event) => {
   const session = await readSession(id, piSessionDir || undefined)
   if (!session) {
     throw createError({ statusCode: 404, statusMessage: 'Session not found' })
+  }
+  const etag = `"${createHash('sha256').update(`${session.version}:${JSON.stringify(session.status)}`).digest('hex')}"`
+  setResponseHeader(event, 'Cache-Control', 'private, no-cache')
+  setResponseHeader(event, 'ETag', etag)
+  if (getHeader(event, 'if-none-match') === etag) {
+    setResponseStatus(event, 304)
+    return null
   }
   return session
 })

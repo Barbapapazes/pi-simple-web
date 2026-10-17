@@ -3,6 +3,7 @@ import type { ConversationBlock } from '@pi-simple-web/shared/types/conversation
 
 const props = defineProps<{ block: ConversationBlock, busy?: boolean }>()
 const expanded = ref(false)
+const expandedDiff = ref(false)
 const args = computed(() => props.block.arguments || {})
 const name = computed(() => props.block.name || 'tool')
 const isShell = computed(() => ['bash', 'powershell'].includes(name.value))
@@ -18,6 +19,7 @@ const command = computed(() => String(args.value.command || props.block.text || 
 const state = computed(() => props.block.result ? (props.block.result.isError ? 'error' : 'success') : props.busy ? 'pending' : 'unknown')
 const hideRead = computed(() => name.value === 'read' && !props.block.result?.isError && !expanded.value)
 const diffLines = computed(() => props.block.result?.diff?.split('\n') || [])
+const visibleDiff = computed(() => expandedDiff.value ? diffLines.value : diffLines.value.slice(0, 40))
 </script>
 
 <template>
@@ -38,7 +40,10 @@ const diffLines = computed(() => props.block.result?.diff?.split('\n') || [])
     <ConversationText v-if="!isFile && !isShell" :text="block.text || ''" preformatted :preview="10" class="mt-3 pi-tool-muted" />
     <ConversationText v-if="name === 'write' && typeof args.content === 'string'" :text="args.content" preformatted :preview="10" class="mt-3 pi-tool-muted" />
     <div v-if="diffLines.length && !block.result?.isError" class="mt-3 overflow-x-auto" aria-label="Edit diff">
-      <pre v-for="(line, index) in diffLines" :key="index" :class="/^\+/.test(line) ? 'pi-diff-added' : /^-/.test(line) ? 'pi-diff-removed' : 'pi-tool-muted'">{{ line || ' ' }}</pre>
+      <pre v-for="(line, index) in visibleDiff" :key="index" :class="/^\+/.test(line) ? 'pi-diff-added' : /^-/.test(line) ? 'pi-diff-removed' : 'pi-tool-muted'">{{ line || ' ' }}</pre>
+      <button v-if="diffLines.length > 40" type="button" class="pi-expand mt-2" :aria-expanded="expandedDiff" @click="expandedDiff = !expandedDiff">
+        {{ expandedDiff ? 'Collapse diff' : `Show ${diffLines.length - 40} more lines` }}
+      </button>
     </div>
     <div v-else-if="block.result && !hideRead" class="mt-3 space-y-3 pi-tool-muted">
       <template v-for="(result, index) in block.result.blocks" :key="index">

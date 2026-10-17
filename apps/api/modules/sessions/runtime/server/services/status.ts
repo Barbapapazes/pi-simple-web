@@ -6,9 +6,20 @@ import { isAbsolute, relative, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { calculateContextTokens, estimateTokens, ModelRuntime, SettingsManager } from '@earendil-works/pi-coding-agent'
 
+import { createVersionedCache } from './versioned-cache.ts'
+
 const exec = promisify(execFile)
+const workspaces = createVersionedCache<Pick<SessionStatus, 'workspace' | 'gitBranch'>>(64, 64 * 1024, 5000)
+const compactionSettings = createVersionedCache<boolean>(64, 64, 5000)
+const runtimes = createVersionedCache<ModelRuntime>(1, 1, 60_000)
+type UsageTotals = Pick<SessionStatus, 'input' | 'output' | 'cacheRead' | 'cacheWrite' | 'cacheHitRate' | 'cost'>
+const usageTotals = new WeakMap<SessionManager, { count: number, last: ReturnType<SessionManager['getEntries']>[number] | undefined, totals: UsageTotals }>()
 
 export async function workspaceStatus(cwd: string): Promise<Pick<SessionStatus, 'workspace' | 'gitBranch'>> {
+  return workspaces.get(cwd, '', 1024, () => readWorkspaceStatus(cwd))
+}
+
+async function readWorkspaceStatus(cwd: string): Promise<Pick<SessionStatus, 'workspace' | 'gitBranch'>> {
   const path = relative(homedir(), cwd)
   const workspace = !isAbsolute(path) && path !== '..' && !path.startsWith(`..${sep}`)
     ? path ? `~${sep}${path}` : '~'
@@ -22,10 +33,26 @@ export async function workspaceStatus(cwd: string): Promise<Pick<SessionStatus, 
   return { workspace, gitBranch }
 }
 
+export async function statusEnvironment(cwd: string) {
+  const [workspace, autoCompaction] = await Promise.all([
+    workspaceStatus(cwd),
+    compactionSettings.get(cwd, '', 1, async () => SettingsManager.create(cwd).getCompactionEnabled()),
+  ])
+  return { ...workspace, autoCompaction }
+}
+
 // Match Pi's footer: billing totals include every branch and pre-compaction history.
-export function sessionUsage(manager: SessionManager): Pick<SessionStatus, 'input' | 'output' | 'cacheRead' | 'cacheWrite' | 'cacheHitRate' | 'cost'> {
-  const totals = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheHitRate: null as number | null, cost: 0 }
-  for (const entry of manager.getEntries()) {
+export function sessionUsage(manager: SessionManager): UsageTotals {
+  const cached = usageTotals.get(manager)
+  if (cached && cached.count === manager.getEntryCount() && (!cached.last || manager.getEntry(cached.last.id) === cached.last))
+    return { ...cached.totals }
+  const entries = manager.getEntries()
+  // Persisted entries are immutable and append-only during a run. Branch moves
+  // don't affect billing totals; reload/truncation falls back to a full sum.
+  const reusable = cached && cached.count <= entries.length && (cached.count === 0 || entries[cached.count - 1] === cached.last)
+  const totals: UsageTotals = reusable ? { ...cached.totals } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheHitRate: null, cost: 0 }
+  for (let index = reusable ? cached.count : 0; index < entries.length; index++) {
+    const entry = entries[index]!
     const usage = entry.type === 'usage' || entry.type === 'compaction' || entry.type === 'branch_summary'
       ? entry.usage
       : entry.type === 'message' && (entry.message.role === 'assistant' || entry.message.role === 'toolResult')
@@ -43,6 +70,7 @@ export function sessionUsage(manager: SessionManager): Pick<SessionStatus, 'inpu
       totals.cacheHitRate = prompt > 0 ? usage.cacheRead / prompt * 100 : null
     }
   }
+  usageTotals.set(manager, { count: entries.length, last: entries.at(-1), totals: { ...totals } })
   return totals
 }
 
@@ -51,6 +79,7 @@ export function recordedContext(manager: SessionManager, contextWindow: number):
     return null
   const branch = manager.getBranch()
   const projection = manager.buildSessionProjection()
+  const branchIndexes = new Map(branch.map((entry, index) => [entry.id, index]))
   const invalidation = branch.findLastIndex(entry => entry.type === 'compaction' || entry.type === 'context_edit')
   // Trust only a projected, successful response after the most recent context change.
   for (let i = projection.entries.length - 1; i >= 0; i--) {
@@ -60,7 +89,7 @@ export function recordedContext(manager: SessionManager, contextWindow: number):
       && calculateContextTokens(message.usage) > 0)
     if (assistant?.role !== 'assistant')
       continue
-    if (branch.findIndex(item => item.id === entry.sourceEntry.id) <= invalidation)
+    if ((branchIndexes.get(entry.sourceEntry.id) ?? -1) <= invalidation)
       break
     const trailing = projection.entries.slice(i + 1).flatMap(item => item.messages)
     const tokens = calculateContextTokens(assistant.usage) + trailing.reduce((sum, message) => sum + estimateTokens(message), 0)
@@ -69,19 +98,17 @@ export function recordedContext(manager: SessionManager, contextWindow: number):
   return { tokens: null, contextWindow, percent: null }
 }
 
-export async function recordedStatus(manager: SessionManager): Promise<SessionStatus> {
-  const workspace = await workspaceStatus(manager.getCwd())
+export async function recordedStatus(manager: SessionManager, selected = manager.buildSessionContext().model): Promise<SessionStatus> {
+  const environment = await statusEnvironment(manager.getCwd())
   const status: SessionStatus = {
-    ...workspace,
+    ...environment,
     ...sessionUsage(manager),
     context: null,
-    autoCompaction: SettingsManager.create(manager.getCwd()).getCompactionEnabled(),
     subscription: false,
   }
   try {
     // Catalog lookup only: no agent, extensions, credential refresh, or provider requests.
-    const runtime = await ModelRuntime.create({ refreshOnCreate: false, allowModelNetwork: false })
-    const selected = manager.buildSessionContext().model
+    const runtime = await runtimes.get('catalog', '', 1, () => ModelRuntime.create({ refreshOnCreate: false, allowModelNetwork: false }))
     const model = selected && runtime.getModel(selected.provider, selected.modelId)
     status.context = recordedContext(manager, model?.contextWindow ?? 0)
     status.subscription = !!selected && (selected.provider === 'kimi-coding' || runtime.isUsingSubscription(selected.provider))

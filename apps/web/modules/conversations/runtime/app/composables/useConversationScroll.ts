@@ -5,6 +5,20 @@ export function useConversationScroll(entries: Ref<unknown[]>) {
   const content = ref<HTMLElement>()
   const followTail = ref(true)
   let observer: ResizeObserver | undefined
+  let preserving = false
+  async function preserveOnPrepend(update: () => void) {
+    const element = viewport.value
+    if (!element)
+      return
+    preserving = true
+    followTail.value = false
+    const height = element.scrollHeight
+    const top = element.scrollTop
+    update()
+    await nextTick()
+    element.scrollTop = top + element.scrollHeight - height
+    preserving = false
+  }
 
   function onScroll() {
     const element = viewport.value
@@ -22,7 +36,7 @@ export function useConversationScroll(entries: Ref<unknown[]>) {
   }
   onMounted(() => {
     observer = new ResizeObserver(() => {
-      if (followTail.value)
+      if (followTail.value && !preserving)
         scrollToLatest()
     })
     if (content.value)
@@ -31,8 +45,8 @@ export function useConversationScroll(entries: Ref<unknown[]>) {
   onBeforeUnmount(() => observer?.disconnect())
   watch(entries, async () => {
     await nextTick()
-    if (followTail.value)
+    if (followTail.value && !preserving)
       scrollToLatest()
   })
-  return { viewport, content, followTail, onScroll, jumpToLatest }
+  return { viewport, content, followTail, onScroll, jumpToLatest, preserveOnPrepend }
 }

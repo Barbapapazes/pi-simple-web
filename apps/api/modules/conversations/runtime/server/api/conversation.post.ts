@@ -1,13 +1,11 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent'
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
-import { conversationEntry, listSessions } from '../../../../sessions/runtime/server/services/sessions'
+import { conversationEntry, findSessionInfo, invalidateSessionIndex } from '../../../../sessions/runtime/server/services/sessions'
 import { liveStatus, workspaceStatus } from '../../../../sessions/runtime/server/services/status'
 import { createConversationResourceLoader, disposeConversationSession } from '../services/agent'
-import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../services/conversation'
-
-// Only one SDK session writes a given file; additional input uses that live run.
-const activeSessions = new Set<string>()
-const activeRuns = new Map<string, ReturnType<typeof createConversationRun>>()
+import { createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../services/conversation'
+import { activeRuns, activeSessions, createLiveConversation, liveConversations } from '../services/live-conversations'
+import { observeConversation } from '../services/observe-conversation'
 
 export default defineEventHandler(async (event) => {
   if (!getHeader(event, 'content-type')?.startsWith('application/json')) {
@@ -41,7 +39,7 @@ export default defineEventHandler(async (event) => {
   activeSessions.add(lock)
   let session: AgentSession | undefined
   try {
-    const info = input.id ? (await listSessions(sessionDir)).find(info => info.id === input.id) : undefined
+    const info = input.id ? await findSessionInfo(input.id, sessionDir) : undefined
     if (input.id && !info)
       throw createError({ statusCode: 404, statusMessage: 'Session not found.' })
     let cwd: string
@@ -74,32 +72,35 @@ export default defineEventHandler(async (event) => {
   // Also lock newly created sessions by their real ID so reopening the tab
   // cannot start a second run while the original continues in the background.
   activeSessions.add(agent.sessionId)
-  const stream = createEventStream(event)
-  const emit = createConversationEmitter(stream)
-  // Begin only after the response has been attached. The run owns the session,
-  // independently of whether the browser is still listening.
-  const response = stream.send()
+  const live = createLiveConversation(agent.sessionId, agent.sessionManager.getCwd(), agent.sessionManager.getBranch().map(conversationEntry))
+  liveConversations.set(agent.sessionId, live)
+  activeRuns.set(agent.sessionId, run)
+  invalidateSessionIndex(sessionDir)
+  const emit = live.publish
+  // Attach before starting; losing this observer never cancels the owned agent.
+  const response = observeConversation(event, live)
   void (async () => {
     try {
       const workspace = await workspaceStatus(agent.sessionManager.getCwd())
       const getStatus = () => liveStatus(agent, workspace)
-      activeRuns.set(agent.sessionId, run)
-      emit({ type: 'started', id: agent.sessionId, cwd: agent.sessionManager.getCwd(), branch: agent.sessionManager.getBranch().map(conversationEntry), status: getStatus() })
+      emit({ type: 'status', status: getStatus() })
       await streamConversation(agent, input.message, emit, getStatus, run.finish)
     }
     catch (error) {
       console.error('Background conversation failed:', error)
       emit({ type: 'error', message: error instanceof Error ? error.message : 'Pi could not complete this message.' })
+      emit({ type: 'done', branch: agent.sessionManager.getBranch().map(conversationEntry) })
     }
     finally {
       activeRuns.delete(agent.sessionId)
+      liveConversations.delete(agent.sessionId)
+      invalidateSessionIndex(sessionDir)
       try {
         await disposeConversationSession(agent)
       }
       finally {
         activeSessions.delete(lock)
         activeSessions.delete(agent.sessionId)
-        await stream.close().catch(() => {})
       }
     }
   })().catch((error) => { console.error('Background conversation cleanup failed:', error) })

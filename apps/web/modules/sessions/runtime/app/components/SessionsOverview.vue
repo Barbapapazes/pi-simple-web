@@ -2,26 +2,22 @@
 import { formatCost, formatTokens } from '@pi-simple-web/shared/utils/status'
 import { truncateTitle } from '@pi-simple-web/shared/utils/title'
 
-const { data: sessions, search, workspace, workspaces, filteredSessions, error, isPending, isLoading, refetch } = useSessions()
-const totalMessages = computed(() => (sessions.value || []).reduce((total, session) => total + session.messageCount, 0))
-const totalUsage = computed(() => (sessions.value || []).reduce((totals, session) => {
-  if (session.usage) {
-    totals.input += session.usage.input
-    totals.output += session.usage.output
-    totals.cacheRead += session.usage.cacheRead
-    totals.cacheWrite += session.usage.cacheWrite
-    totals.cost += session.usage.cost
-  }
-  return totals
-}, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 }))
-const missingUsage = computed(() => (sessions.value || []).filter(session => !session.usage).length)
+const { search, workspace, total, filteredSessions, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
+const { data: metrics, error: metricsError, refetch: refetchMetrics } = useSessionMetrics()
+const totalUsage = computed(() => metrics.value?.usage || { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 })
+const missingUsage = computed(() => metrics.value?.missingUsage || 0)
+const hasSessions = computed(() => !!metrics.value?.sessions || !!search.value || !!workspace.value)
+function refresh() {
+  void refetch()
+  void refetchMetrics()
+}
 const stats = computed(() => [
-  { label: 'Total sessions', value: (sessions.value?.length || 0).toLocaleString(), detail: '' },
-  { label: 'Workspaces', value: workspaces.value.length.toLocaleString(), detail: '' },
-  { label: 'Messages', value: totalMessages.value.toLocaleString(), detail: '' },
-  { label: 'Input tokens', value: formatTokens(totalUsage.value.input), detail: `Cache read: ${formatTokens(totalUsage.value.cacheRead)} · write: ${formatTokens(totalUsage.value.cacheWrite)}` },
-  { label: 'Output tokens', value: formatTokens(totalUsage.value.output), detail: '' },
-  { label: 'Estimated cost', value: formatCost(totalUsage.value.cost), detail: '' },
+  { label: 'Total sessions', value: metrics.value?.sessions.toLocaleString() ?? '—', detail: '' },
+  { label: 'Workspaces', value: metrics.value?.workspaces.toLocaleString() ?? '—', detail: '' },
+  { label: 'Messages', value: metrics.value?.messages.toLocaleString() ?? '—', detail: '' },
+  { label: 'Input tokens', value: metrics.value ? formatTokens(totalUsage.value.input) : '—', detail: `Cache read: ${formatTokens(totalUsage.value.cacheRead)} · write: ${formatTokens(totalUsage.value.cacheWrite)}` },
+  { label: 'Output tokens', value: metrics.value ? formatTokens(totalUsage.value.output) : '—', detail: '' },
+  { label: 'Estimated cost', value: metrics.value ? formatCost(totalUsage.value.cost) : '—', detail: '' },
 ])
 function workspaceName(cwd: string) {
   return cwd.split(/[\\/]/).filter(Boolean).pop() || 'Unknown'
@@ -37,7 +33,7 @@ useHead({ title: 'Sessions · Autobots' })
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <UButton icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="isLoading" aria-label="Refresh sessions" @click="refetch()">
+          <UButton icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="isLoading" aria-label="Refresh sessions" @click="refresh()">
             <span class="hidden sm:inline">Refresh</span>
           </UButton>
         </template>
@@ -63,6 +59,7 @@ useHead({ title: 'Sessions · Autobots' })
         </div>
       </div>
 
+      <UAlert v-if="metricsError" color="error" title="Unable to load metrics" description="Refresh to try again." />
       <p v-if="missingUsage" class="text-xs text-muted">
         Usage unavailable for {{ missingUsage }} session(s); totals include only available usage.
       </p>
@@ -74,7 +71,7 @@ useHead({ title: 'Sessions · Autobots' })
               Session history
             </h2>
             <UBadge color="neutral" variant="subtle" size="sm">
-              {{ filteredSessions.length }}
+              {{ total }}
             </UBadge>
           </div>
           <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -179,18 +176,19 @@ useHead({ title: 'Sessions · Autobots' })
         <div v-else-if="!error" class="flex flex-col items-center px-6 py-16 text-center">
           <UIcon name="i-lucide-messages-square" class="mb-4 size-10 text-dimmed" />
           <h3 class="font-semibold">
-            {{ sessions?.length ? 'No matching conversations' : 'No sessions yet' }}
+            {{ hasSessions ? 'No matching conversations' : 'No sessions yet' }}
           </h3>
           <p class="mt-2 max-w-sm text-sm text-muted">
-            {{ sessions?.length ? 'Try another search or workspace filter.' : 'Start a new conversation to work with Pi in your local workspace.' }}
+            {{ hasSessions ? 'Try another search or workspace filter.' : 'Start a new conversation to work with Pi in your local workspace.' }}
           </p>
-          <UButton v-if="!sessions?.length" to="/new" icon="i-lucide-plus" class="mt-4">
+          <UButton v-if="!hasSessions" to="/new" icon="i-lucide-plus" class="mt-4">
             New conversation
           </UButton>
-          <UButton v-if="sessions?.length" class="mt-4" color="neutral" variant="outline" @click="search = ''; workspace = ''">
+          <UButton v-if="hasSessions" class="mt-4" color="neutral" variant="outline" @click="search = ''; workspace = ''">
             Clear filters
           </UButton>
         </div>
+        <SessionLoadMore :has-more="hasNextPage" :loading="isLoading" :failed="!!error" @load="loadNextPage({ cancelRefetch: false })" />
       </section>
     </template>
   </UDashboardPanel>

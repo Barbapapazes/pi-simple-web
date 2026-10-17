@@ -19,6 +19,21 @@ export interface SessionSummary {
   usage: SessionUsage | null
 }
 
+export interface SessionPage {
+  items: SessionSummary[]
+  nextOffset: number | null
+  total: number
+  workspaces: string[]
+}
+
+export interface SessionMetrics {
+  sessions: number
+  workspaces: number
+  messages: number
+  usage: SessionUsage
+  missingUsage: number
+}
+
 export interface SessionStatus {
   workspace: string
   gitBranch: string | null
@@ -34,6 +49,7 @@ export interface SessionStatus {
 }
 
 export interface SessionDetail extends SessionSummary {
+  version: string
   model: { provider: string, modelId: string } | null
   thinkingLevel: string
   leafId: string | null

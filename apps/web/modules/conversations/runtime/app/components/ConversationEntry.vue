@@ -28,20 +28,14 @@ const shellCall = computed(() => props.entry.role === 'bashExecution'
       </p>
       <template v-for="(block, index) in entry.blocks" :key="block.toolCallId || index">
         <ConversationText v-if="block.type === 'text'" :text="block.text || ''" :markdown="!isTool" :preformatted="isTool" :preview="isTool ? 10 : undefined" />
-        <details v-else-if="block.type === 'thinking'" class="pi-thinking">
-          <summary class="cursor-pointer text-sm">
-            Thinking…
-          </summary>
-          <ConversationText :text="block.text || ''" class="mt-3" />
-        </details>
+        <ConversationDisclosure v-else-if="block.type === 'thinking'" label="Thinking…" class="pi-thinking">
+          <ConversationText :text="block.text || ''" />
+        </ConversationDisclosure>
         <img v-else-if="block.type === 'image'" :src="block.src" alt="Session attachment" loading="lazy" class="max-h-96 max-w-full object-contain">
         <ConversationTool v-else-if="block.type === 'toolCall'" :block="block" :busy="busy" />
-        <details v-else class="text-sm">
-          <summary class="cursor-pointer text-xs text-muted">
-            Entry data
-          </summary>
-          <ConversationText :text="block.text || ''" preformatted :preview="10" class="mt-3" />
-        </details>
+        <ConversationDisclosure v-else label="Entry data" class="text-sm text-muted">
+          <ConversationText :text="block.text || ''" preformatted :preview="10" />
+        </ConversationDisclosure>
       </template>
     </div>
   </article>

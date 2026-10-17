@@ -13,14 +13,15 @@ export default defineEventHandler((event) => {
   }
 
   setResponseHeader(event, 'Access-Control-Allow-Origin', origin)
+  setResponseHeader(event, 'Access-Control-Expose-Headers', 'ETag')
   if (event.method === 'OPTIONS') {
     const method = getHeader(event, 'access-control-request-method')
     const headers = getHeader(event, 'access-control-request-headers')?.split(',').map(value => value.trim().toLowerCase()) || []
-    if (!method || !['GET', 'POST'].includes(method) || headers.some(header => header !== 'content-type')) {
+    if (!method || !['GET', 'POST'].includes(method) || headers.some(header => !['content-type', 'if-none-match'].includes(header))) {
       throw createError({ statusCode: 403, statusMessage: 'CORS request is not allowed.' })
     }
     setResponseHeader(event, 'Access-Control-Allow-Methods', 'GET, POST')
-    setResponseHeader(event, 'Access-Control-Allow-Headers', 'Content-Type')
+    setResponseHeader(event, 'Access-Control-Allow-Headers', 'Content-Type, If-None-Match')
     return sendNoContent(event)
   }
 })

@@ -22,6 +22,47 @@ export function groupToolResults(entries: ConversationEntry[]): ConversationEntr
   })
 }
 
+// Preserve object identity for unchanged messages so token updates do not
+// re-render historical Markdown. The WeakMap releases replaced snapshots.
+export function createToolResultGrouper() {
+  const cache = new WeakMap<ConversationEntry, { results: (ConversationEntry | undefined)[], view: ConversationEntry }>()
+  const entryCalls = new WeakMap<ConversationEntry, string[]>()
+  function callIds(entry: ConversationEntry) {
+    let ids = entryCalls.get(entry)
+    if (!ids) {
+      ids = entry.blocks.filter(block => block.type === 'toolCall' && block.toolCallId).map(block => block.toolCallId!)
+      entryCalls.set(entry, ids)
+    }
+    return ids
+  }
+  return (entries: ConversationEntry[]): ConversationEntry[] => {
+    const calls = new Set<string>()
+    const results = new Map<string, ConversationEntry>()
+    for (const entry of entries) {
+      if (entry.role.startsWith('tool:') && entry.toolCallId)
+        results.set(entry.toolCallId, entry)
+      for (const id of callIds(entry))
+        calls.add(id)
+    }
+    return entries.filter(entry => !entry.role.startsWith('tool:') || !entry.toolCallId || !calls.has(entry.toolCallId)).map((entry) => {
+      if (!callIds(entry).length)
+        return entry
+      const paired = entry.blocks.map(block => block.type === 'toolCall' && block.toolCallId ? results.get(block.toolCallId) : undefined)
+      if (!paired.some(Boolean))
+        return entry
+      const cached = cache.get(entry)
+      if (cached && paired.every((result, index) => result === cached.results[index]))
+        return cached.view
+      const view = { ...entry, blocks: entry.blocks.map((block, index): ConversationBlock => {
+        const result = paired[index]
+        return result ? { ...block, result: { blocks: result.blocks, isError: result.isError, diff: result.diff } } : block
+      }) }
+      cache.set(entry, { results: paired, view })
+      return view
+    })
+  }
+}
+
 export function previewLines(text: string, limit: number, tail = false) {
   const lines = text.trimEnd().split('\n')
   return {
