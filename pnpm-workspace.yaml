@@ -16,12 +16,6 @@ minimumReleaseAgeExclude:
   - '@iconify-json/lucide@1.2.139'
   - eslint@10.12.0
 
-minimumReleaseAgeExcludePrune: true
-
 packages:
   - apps/*
   - packages/*
-
-shellEmulator: true
-
-trustPolicy: no-downgrade
