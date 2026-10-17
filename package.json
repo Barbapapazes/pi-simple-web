@@ -15,11 +15,11 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.5.1",
-    "eslint": "^10.12.0",
-    "typescript": "^5.9.3",
-    "vue-tsc": "^3.3.12",
     "@comark/nuxt": "^0.7.0",
     "@earendil-works/pi-coding-agent": "^1.0.1",
-    "@pi-simple-web/shared": "workspace:*"
+    "@pi-simple-web/shared": "workspace:*",
+    "eslint": "^10.12.0",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.12"
   }
 }

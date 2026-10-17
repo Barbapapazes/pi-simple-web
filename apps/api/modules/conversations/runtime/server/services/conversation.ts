@@ -1,6 +1,6 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent'
-import type { SessionStatus } from '@pi-simple-web/shared/sessions/types/sessions'
 import type { ConversationEvent, StreamingBehavior } from '@pi-simple-web/shared/conversations/types/conversation'
+import type { SessionStatus } from '@pi-simple-web/shared/sessions/types/sessions'
 import { stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { isAbsolute, normalize } from 'node:path'

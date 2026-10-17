@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { groupToolResults } from '@pi-simple-web/shared/conversations/utils/conversation'
-import { useSession } from '#sessions/app/composables/useSession'
 import { truncateTitle } from '@pi-simple-web/shared/utils/title'
+import { useSession } from '#sessions/app/composables/useSession'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))

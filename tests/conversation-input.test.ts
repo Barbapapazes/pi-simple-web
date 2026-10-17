@@ -6,8 +6,8 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
-import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../apps/api/modules/conversations/runtime/server/services/conversation.ts'
 import { messageShortcut } from '@pi-simple-web/shared/conversations/utils/conversation-input'
+import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../apps/api/modules/conversations/runtime/server/services/conversation.ts'
 import { sessionUsage } from '../apps/api/modules/sessions/runtime/server/services/status.ts'
 
 test('chat accepts only non-empty, bounded messages and valid IDs', () => {

@@ -1,6 +1,6 @@
 import type { SessionEntry, SessionInfo } from '@earendil-works/pi-coding-agent'
-import type { ConversationBlock, ConversationEntry } from '@pi-simple-web/shared/types/conversation'
 import type { SessionDetail, SessionSummary, SessionUsage } from '@pi-simple-web/shared/sessions/types/sessions'
+import type { ConversationBlock, ConversationEntry } from '@pi-simple-web/shared/types/conversation'
 import { readFile } from 'node:fs/promises'
 import { parseSessionEntries, SessionManager } from '@earendil-works/pi-coding-agent'
 import { readSessionUsage } from './session-usage.ts'

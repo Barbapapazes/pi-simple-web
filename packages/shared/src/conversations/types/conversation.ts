@@ -1,5 +1,5 @@
-import type { ConversationEntry } from '@pi-simple-web/shared/types/conversation'
 import type { SessionStatus } from '@pi-simple-web/shared/sessions/types/sessions'
+import type { ConversationEntry } from '@pi-simple-web/shared/types/conversation'
 
 export type StreamingBehavior = 'steer' | 'followUp'
 
