@@ -8,6 +8,8 @@
     "build": "pnpm --filter './apps/*' build",
     "build:web": "pnpm --filter @pi-simple-web/web build",
     "build:api": "pnpm --filter @pi-simple-web/api build",
+    "generate": "pnpm --filter @pi-simple-web/web generate",
+    "preview": "pnpm --parallel --filter './apps/*' preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "node --experimental-strip-types --test tests/*.test.ts",

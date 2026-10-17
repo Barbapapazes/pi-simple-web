@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host 127.0.0.1 --port 3001",
-    "preview": "nuxt preview",
+    "preview": "nuxt preview --host 127.0.0.1 --port 3001",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck"
   },

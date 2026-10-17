@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -40,6 +41,7 @@ async function start(app, extra) {
   throw new Error(`${app} did not start`)
 }
 try {
+  assert.equal(existsSync(join(bundle, 'web/.output/server/node_modules/@earendil-works/pi-coding-agent')), false)
   const api = await start('api', { NUXT_PI_SESSION_DIR: directory, PI_CODING_AGENT_DIR: directory })
   const web = await start('web', { NUXT_API_BASE: api })
   const home = await fetch(web)

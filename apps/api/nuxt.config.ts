@@ -15,7 +15,7 @@ if (!oauthDir)
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  // Nuxt provides only the Nitro API server; no Vue client is built.
+  // API-only: disable Nuxt's Vue server renderer.
   experimental: { noVueServer: true },
   runtimeConfig: {
     piSessionDir: '',
