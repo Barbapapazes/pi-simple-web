@@ -6,7 +6,7 @@ import process from 'node:process'
 import { test } from 'node:test'
 import { setTimeout } from 'node:timers/promises'
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
-import { createConversationResourceLoader, disposeConversationSession } from '../modules/conversations/runtime/server/services/agent.ts'
+import { createConversationResourceLoader, disposeConversationSession } from '../apps/api/modules/conversations/runtime/server/services/agent.ts'
 
 // A local JSON-RPC fixture: no credentials, model requests, or external network.
 const serverScript = `

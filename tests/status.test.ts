@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
-import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../modules/sessions/runtime/server/services/status.ts'
-import { formatCost, formatTokens } from '../shared/utils/status.ts'
+import { formatCost, formatTokens } from '@pi-simple-web/shared/utils/status'
+import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../apps/api/modules/sessions/runtime/server/services/status.ts'
 
 function assistant(input = 18, output = 704, cacheRead = 14000, cacheWrite = 5700, cost = 0.023) {
   return {

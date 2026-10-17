@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { truncateTitle } from '../shared/utils/title.ts'
+import { truncateTitle } from '@pi-simple-web/shared/utils/title'
 
 test('titles of at most 100 characters remain unchanged', () => {
   for (const title of ['', 'Conversation', 'a'.repeat(100)]) {
