@@ -10,6 +10,7 @@ module.exports = {
       NODE_ENV: 'production',
       HOST: '127.0.0.1',
       PORT: '4001',
+      NUXT_ALLOWED_ORIGINS: 'https://barbabot.soubiran.dev',
     },
   }],
 }
