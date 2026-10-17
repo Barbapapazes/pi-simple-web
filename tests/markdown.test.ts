@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parseMarkdown } from '@comark/nuxt/parse'
-import { conversationMarkdownOptions } from '../modules/conversations/runtime/shared/utils/markdown.ts'
+import { conversationMarkdownOptions } from '@pi-simple-web/shared/conversations/utils/markdown'
 
 test('conversation Markdown renders headings, formatting, lists, and fenced code', async () => {
   const document = await parseMarkdown('# Heading\n\n**bold** and `code`\n\n- item\n\n```js\nconst x = 1\n```', conversationMarkdownOptions)

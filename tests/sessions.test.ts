@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { conversationEntry, listSessions, readSession, summarizeSession } from '../modules/sessions/runtime/server/services/sessions.ts'
+import { conversationEntry, listSessions, readSession, summarizeSession } from '../apps/api/modules/sessions/runtime/server/services/sessions.ts'
 
 test('discovers sessions, reads the branch without rewriting, and rejects unknown IDs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'pi-web-test-'))

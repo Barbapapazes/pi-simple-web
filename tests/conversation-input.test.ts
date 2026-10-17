@@ -1,14 +1,14 @@
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent'
-import type { ConversationEvent } from '../modules/conversations/runtime/shared/types/conversation.ts'
+import type { ConversationEvent } from '@pi-simple-web/shared/conversations/types/conversation'
 import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
-import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../modules/conversations/runtime/server/services/conversation.ts'
-import { messageShortcut } from '../modules/conversations/runtime/shared/utils/conversation-input.ts'
-import { sessionUsage } from '../modules/sessions/runtime/server/services/status.ts'
+import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../apps/api/modules/conversations/runtime/server/services/conversation.ts'
+import { messageShortcut } from '@pi-simple-web/shared/conversations/utils/conversation-input'
+import { sessionUsage } from '../apps/api/modules/sessions/runtime/server/services/status.ts'
 
 test('chat accepts only non-empty, bounded messages and valid IDs', () => {
   assert.deepEqual(validateConversationInput({ message: '  Hello Pi  ', id: 'session-id' }), { message: 'Hello Pi', id: 'session-id' })

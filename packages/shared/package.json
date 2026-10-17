@@ -1,0 +1,8 @@
+{
+  "name": "@pi-simple-web/shared",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

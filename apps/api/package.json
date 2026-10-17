@@ -1,0 +1,23 @@
+{
+  "name": "@pi-simple-web/api",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev --host 127.0.0.1 --port 3001",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^1.0.1",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1",
+    "@pi-simple-web/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.12"
+  }
+}
