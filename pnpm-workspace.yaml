@@ -19,3 +19,4 @@ allowBuilds:
   esbuild: false
   protobufjs: false
   vue-demi: false
+  workerd: false

@@ -5,6 +5,9 @@
   "scripts": {
     "build": "nuxt build",
     "generate": "nuxt generate",
+    "build:cloudflare": "nuxt generate && node scripts/build-cloudflare.ts",
+    "deploy": "pnpm build:cloudflare && cf deploy --prebuilt",
+    "deploy:check": "pnpm build:cloudflare && cf deploy --prebuilt --dry-run",
     "dev": "nuxt dev --host 127.0.0.1 --port 3000",
     "preview": "nuxt preview --host 127.0.0.1 --port 3000",
     "postinstall": "nuxt prepare",
@@ -25,6 +28,9 @@
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
+    "@cloudflare/build-output-utils": "0.9.3",
+    "@cloudflare/config": "0.27.0",
+    "cf": "1.0.0-beta.18",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.3.12"
   }

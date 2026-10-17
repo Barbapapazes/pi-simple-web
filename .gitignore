@@ -4,6 +4,7 @@
 .nuxt
 .nitro
 .cache
+.cloudflare
 dist
 
 # Node dependencies

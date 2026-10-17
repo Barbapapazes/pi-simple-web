@@ -47,6 +47,34 @@ Agent ownership and reconnect registries are process-local. Run a **single API p
 
 ## Production
 
+### Cloudflare static frontend (barbabot.soubiran.dev)
+
+The frontend deploys with Cloudflare's [`cf` CLI](https://blog.cloudflare.com/cloudflare-cf-cli-launch/). `apps/web/cloudflare.config.ts` configures the custom domain `barbabot.soubiran.dev`, disables `workers.dev` and preview URLs, and enables SPA fallback for deep links such as `/sessions/:id`. There is no Worker entrypoint or SSR: only Nuxt's generated `.output/public` assets are uploaded. The API is **not** deployed to Cloudflare.
+
+Use Node.js 22.18+ (or 24) and install dependencies with `pnpm install`. Authenticate once:
+
+```bash
+pnpm --filter @pi-simple-web/web exec cf auth login
+```
+
+For non-interactive deployments, set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment instead. The token needs Workers Scripts Edit and Workers Routes Edit for the target account/zone. The `soubiran.dev` zone must be active in that Cloudflare account, and the custom hostname must not conflict with an existing DNS record or service.
+
+```bash
+# Build and validate without credentials or uploading anything:
+pnpm deploy:web:check
+
+# Generate the SPA and deploy production to the configured custom domain:
+NUXT_PUBLIC_API_BASE=https://your-api.example.com pnpm deploy:web
+```
+
+Replace the example API origin with the address reachable from visitors' browsers (without `/api`). Unlike the optional Node frontend below, static hosting bakes `NUXT_PUBLIC_API_BASE` into assets **at build time**; changing it requires rebuilding and redeploying. If omitted, it remains `http://127.0.0.1:3001`, meaning the visitor's own machine, not the Cloudflare host. Set `NUXT_ALLOWED_ORIGINS=https://barbabot.soubiran.dev` on the separately hosted API. Use HTTPS for a hosted API and protect it with authentication/access control; CORS alone is not protection.
+
+The pinned `cf` beta does not accept an asset source directory in `cloudflare.config.ts`. `apps/web/scripts/build-cloudflare.ts` uses Cloudflare's build-output utilities to package the generated assets into `.cloudflare/output/v0`, then `cf deploy --prebuilt` deploys that output. Use the scripts above rather than bare `cf deploy`, whose automatic Nuxt configuration targets a server build. This setup does not create preview deployments or deploy pull requests.
+
+Cloudflare Workers Builds is connected to `Barbapapazes/pi-simple-web`, branch `main`, for the existing `pi-simple-web` service. Its repository root is `/`, build command is `pnpm --filter @pi-simple-web/web build:cloudflare`, and deploy command is `cd apps/web && pnpm exec cf deploy --prebuilt`. Previews are disabled. Keep `NUXT_PUBLIC_API_BASE` in the production build environment; pushes to `main` rebuild and deploy automatically.
+
+### Optional Node-hosted frontend and API
+
 Build both apps in CI with `pnpm build`, or independently with `pnpm build:web` and `pnpm build:api`. Deploy each app's self-contained `.output` directory to its own host. With Node.js 24, start them independently:
 
 ```bash
@@ -58,7 +86,7 @@ HOST=127.0.0.1 PORT=3000 NUXT_PUBLIC_API_BASE=http://127.0.0.1:3001 \
   node apps/web/.output/server/index.mjs
 ```
 
-`NUXT_PUBLIC_API_BASE` must be reachable from browsers **and** the web server (SSR). It is public runtime configuration, read at web server startup without rebuilding. Set `NUXT_ALLOWED_ORIGINS=https://chat.example.com` on the API for a frontend at that origin; use HTTPS for both when the frontend is HTTPS. SSE and queued input go directly to the API. **Neither app has authentication**: protect both behind compatible access control, including preflight requests. CORS is not authentication and does not restrict non-browser clients. Do not expose the API publicly without access control.
+`NUXT_PUBLIC_API_BASE` must be reachable from browsers. The frontend has SSR disabled. For this Node-hosted option it is public runtime configuration, read at web server startup without rebuilding (unlike the static Cloudflare deployment above). Set `NUXT_ALLOWED_ORIGINS=https://chat.example.com` on the API for a frontend at that origin; use HTTPS for both when the frontend is HTTPS. SSE and queued input go directly to the API. **Neither app has authentication**: protect both behind compatible access control, including preflight requests. CORS is not authentication and does not restrict non-browser clients. Do not expose the API publicly without access control.
 
 ### Download prebuilt bundles
 
