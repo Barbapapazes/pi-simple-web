@@ -45,6 +45,11 @@ try {
   const home = await fetch(web)
   assert.equal(home.status, 200)
   assert.match(await home.text(), /<html/)
+  assert.equal((await fetch(`${web}/new`)).status, 200)
+  assert.equal((await fetch(`${web}/pi.svg`)).status, 200)
+  const icons = await fetch(`${web}/api/_nuxt_icon/lucide.json?icons=refresh-cw`)
+  assert.equal(icons.status, 200)
+  assert.ok((await icons.json()).icons['refresh-cw'])
   for (const base of [api, web]) {
     const sessions = await fetch(`${base}/api/sessions`)
     assert.equal(sessions.status, 200)
@@ -65,6 +70,12 @@ try {
   // Exercise the production proxy with a deterministic SSE upstream, no model
   // credentials required. The first event must arrive before the stream ends.
   const upstream = createServer(async (req, res) => {
+    // Server rendering loads the sidebar's session query before SSE is tested.
+    if (req.url === '/api/sessions') {
+      res.setHeader('content-type', 'application/json')
+      res.end('[]')
+      return
+    }
     assert.equal(req.url, '/api/conversations')
     assert.equal(req.headers.origin, `http://${req.headers.host}`)
     let body = ''
