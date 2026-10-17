@@ -14,6 +14,7 @@ export function useSessions() {
       initialPageParam: 0,
       query: ({ pageParam, signal }) => $fetch<SessionPage>('/api/sessions', {
         baseURL: apiBase,
+        credentials: 'include',
         signal,
         query: { offset: pageParam, limit: 30, search: term, workspace: cwd },
       }),

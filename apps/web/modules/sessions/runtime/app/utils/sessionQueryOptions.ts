@@ -14,6 +14,7 @@ export const sessionQueryOptions = defineQueryOptions((id: string) => {
       const etag = cached && etags.get(etagKey)
       const response = await $fetch.raw<SessionDetail>(`/api/sessions/${encodeURIComponent(id)}`, {
         baseURL: apiBase,
+        credentials: 'include',
         signal,
         headers: etag ? { 'If-None-Match': etag } : undefined,
       })

@@ -25,6 +25,7 @@ export function useSessionUpdates(id: Ref<string>, session: Ref<SessionDetail | 
       controller = new AbortController()
       const latest = await $fetch<{ version: string, environment: Pick<SessionStatus, 'workspace' | 'gitBranch' | 'autoCompaction'> }>(`/api/sessions/${encodeURIComponent(currentId)}/version`, {
         baseURL: apiBase,
+        credentials: 'include',
         signal: controller.signal,
       })
       if (token !== generation)

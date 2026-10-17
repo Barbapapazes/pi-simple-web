@@ -13,6 +13,7 @@ export default defineEventHandler((event) => {
   }
 
   setResponseHeader(event, 'Access-Control-Allow-Origin', origin)
+  setResponseHeader(event, 'Access-Control-Allow-Credentials', 'true')
   setResponseHeader(event, 'Access-Control-Expose-Headers', 'ETag')
   if (event.method === 'OPTIONS') {
     const method = getHeader(event, 'access-control-request-method')

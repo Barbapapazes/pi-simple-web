@@ -43,7 +43,7 @@ async function fetchStream(url: string, init: RequestInit & { signal: AbortSigna
   const timeout = new AbortController()
   const timer = setTimeout(() => timeout.abort(), init.method === 'POST' ? 60_000 : 20_000)
   try {
-    return await fetch(url, { ...init, cache: 'no-store', signal: AbortSignal.any([init.signal, timeout.signal]) })
+    return await fetch(url, { ...init, credentials: 'include', cache: 'no-store', signal: AbortSignal.any([init.signal, timeout.signal]) })
   }
   finally {
     // Only time out the handshake, never a healthy long-running response.
@@ -274,7 +274,7 @@ export function useConversation() {
       return false
     state.value.error = ''
     try {
-      await $fetch('/api/conversations', { baseURL: apiBase, method: 'POST', body: { message, id, streamingBehavior } })
+      await $fetch('/api/conversations', { baseURL: apiBase, credentials: 'include', method: 'POST', body: { message, id, streamingBehavior } })
       return true
     }
     catch (error) {
