@@ -1,7 +1,7 @@
-import type { ConversationEntry } from '../shared/types/conversation.ts'
+import type { ConversationEntry } from '@pi-simple-web/shared/types/conversation'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { groupToolResults, previewLines } from '../modules/conversations/runtime/shared/utils/conversation.ts'
+import { groupToolResults, previewLines } from '@pi-simple-web/shared/conversations/utils/conversation'
 
 function entry(id: string, fields: Partial<ConversationEntry>): ConversationEntry {
   return {

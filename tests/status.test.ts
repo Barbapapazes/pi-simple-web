@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
-import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../modules/sessions/runtime/server/services/status.ts'
-import { formatCost, formatTokens } from '../shared/utils/status.ts'
+import { formatCost, formatTokens } from '@pi-simple-web/shared/utils/status'
+import { recordedContext, recordedStatus, sessionUsage, workspaceStatus } from '../apps/api/modules/sessions/runtime/server/services/status.ts'
 
 function assistant(input = 18, output = 704, cacheRead = 14000, cacheWrite = 5700, cost = 0.023) {
   return {
@@ -50,6 +50,28 @@ test('usage includes abandoned branches, summaries, tools and cache warming with
   assert.ok(Math.abs(totals.cost - 0.037) < 1e-10)
 })
 
+test('live usage reuses unchanged totals and adds only persisted entries without leaking mutable cache data', (t) => {
+  const manager = SessionManager.inMemory('/test')
+  const user = manager.appendMessage({ role: 'user', content: 'Hi', timestamp: 1 })
+  manager.appendMessage(assistant(10, 20, 30, 40, 0.01))
+  const initial = sessionUsage(manager)
+  const reads = t.mock.method(manager, 'getEntries')
+  initial.input = 999
+  assert.equal(sessionUsage(manager).input, 10)
+  assert.equal(reads.mock.callCount(), 0)
+  manager.branch(user)
+  assert.equal(sessionUsage(manager).input, 10)
+  assert.equal(reads.mock.callCount(), 0)
+  manager.appendMessage(assistant(1, 2, 3, 4, 0.02))
+  const next = sessionUsage(manager)
+  assert.equal(next.input, 11)
+  assert.equal(next.output, 22)
+  assert.equal(next.cacheRead, 33)
+  assert.equal(next.cacheWrite, 44)
+  assert.equal(next.cost, 0.03)
+  assert.equal(reads.mock.callCount(), 1)
+})
+
 test('context follows the active branch, includes trailing tools, and invalidates old usage after compaction/edits', () => {
   const manager = SessionManager.inMemory('/test')
   const user = manager.appendMessage({ role: 'user', content: 'Hi', timestamp: 1 })
@@ -82,13 +104,18 @@ test('unknown models and missing workspaces remain browsable', async () => {
   assert.equal(status.cost, 0)
 })
 
-test('workspace status discovers the current Git branch', async () => {
+test('workspace status shares Git lookups and refreshes changed branches after its TTL', async (t) => {
   const cwd = await mkdtemp(join(tmpdir(), 'pi-status-git-'))
   try {
     await promisify(execFile)('git', ['init', '-b', 'status-test', cwd])
     // rev-parse requires a first commit; no user identity or hooks needed.
     await promisify(execFile)('git', ['-C', cwd, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'core.hooksPath=/dev/null', 'commit', '--allow-empty', '-m', 'Test'])
     assert.equal((await workspaceStatus(cwd)).gitBranch, 'status-test')
+    await promisify(execFile)('git', ['-C', cwd, 'checkout', '-b', 'changed'])
+    assert.equal((await workspaceStatus(cwd)).gitBranch, 'status-test')
+    const now = Date.now()
+    t.mock.method(Date, 'now', () => now + 5001)
+    assert.equal((await workspaceStatus(cwd)).gitBranch, 'changed')
   }
   finally {
     await rm(cwd, { recursive: true, force: true })

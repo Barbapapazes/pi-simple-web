@@ -38,8 +38,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Run tests
         run: pnpm test
+
+      - name: Typecheck both apps
+        run: pnpm typecheck
 
       - name: Build production server
         run: pnpm build
@@ -50,18 +56,24 @@ jobs:
         run: |
           # Move outside the checkout so missing dependencies cannot fall back to pnpm.
           SMOKE_DIR=$(mktemp -d)
-          trap 'mv "$SMOKE_DIR/.output" .output; rmdir "$SMOKE_DIR"' EXIT
-          mv .output "$SMOKE_DIR/.output"
-          node scripts/smoke-codemode.mjs "$SMOKE_DIR/.output"
+          trap 'mv "$SMOKE_DIR/api/.output" apps/api/.output; mv "$SMOKE_DIR/web/.output" apps/web/.output; rm -rf "$SMOKE_DIR"' EXIT
+          mkdir -p "$SMOKE_DIR/api" "$SMOKE_DIR/web"
+          mv apps/api/.output "$SMOKE_DIR/api/.output"
+          mv apps/web/.output "$SMOKE_DIR/web/.output"
+          node scripts/smoke-codemode.mjs "$SMOKE_DIR/api/.output"
+          node scripts/smoke-apps.mjs "$SMOKE_DIR"
 
       # Archive first to preserve hidden files, symlinks, and executable bits.
       - name: Package production bundle
-        run: tar -czf pi-simple-web-linux-${{ matrix.arch }}.tar.gz .output
+        run: |
+          for APP in web api; do
+            tar -czf pi-simple-$APP-linux-${{ matrix.arch }}.tar.gz -C apps/$APP .output
+          done
 
       - name: Upload production bundle
         uses: actions/upload-artifact@v4
         with:
           name: pi-simple-web-linux-${{ matrix.arch }}
-          path: pi-simple-web-linux-${{ matrix.arch }}.tar.gz
+          path: pi-simple-*-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 30
