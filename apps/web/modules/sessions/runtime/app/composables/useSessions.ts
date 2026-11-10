@@ -16,7 +16,7 @@ export function useSessions() {
         baseURL: apiBase,
         credentials: 'include',
         signal,
-        query: { offset: pageParam, limit: 30, search: term, workspace: cwd },
+        query: { offset: pageParam, limit: 10, search: term, workspace: cwd },
       }),
       getNextPageParam: page => page.nextOffset,
     }
