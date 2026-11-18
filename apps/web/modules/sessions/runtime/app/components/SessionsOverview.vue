@@ -2,11 +2,11 @@
 import { formatCost, formatTokens } from '@pi-simple-web/shared/utils/status'
 import { truncateTitle } from '@pi-simple-web/shared/utils/title'
 
-const { search, workspace, total, filteredSessions, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
+const { search, total, filteredSessions, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
 const { data: metrics, error: metricsError, refetch: refetchMetrics } = useSessionMetrics()
 const totalUsage = computed(() => metrics.value?.usage || { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 })
 const missingUsage = computed(() => metrics.value?.missingUsage || 0)
-const hasSessions = computed(() => !!metrics.value?.sessions || !!search.value || !!workspace.value)
+const hasSessions = computed(() => !!metrics.value?.sessions || !!search.value)
 function refresh() {
   void refetch()
   void refetchMetrics()
@@ -76,7 +76,6 @@ useHead({ title: 'Sessions · Autobots' })
           </div>
           <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <UInput v-model="search" icon="i-lucide-search" placeholder="Search sessions…" aria-label="Search session history" />
-            <WorkspaceDropdown class="w-full sm:w-52" />
           </div>
         </div>
 
@@ -179,13 +178,13 @@ useHead({ title: 'Sessions · Autobots' })
             {{ hasSessions ? 'No matching conversations' : 'No sessions yet' }}
           </h3>
           <p class="mt-2 max-w-sm text-sm text-muted">
-            {{ hasSessions ? 'Try another search or workspace filter.' : 'Start a new conversation to work with Pi in your local workspace.' }}
+            {{ hasSessions ? 'Try another search.' : 'Start a new conversation with Pi.' }}
           </p>
           <UButton v-if="!hasSessions" to="/new" icon="i-lucide-plus" class="mt-4">
             New conversation
           </UButton>
-          <UButton v-if="hasSessions" class="mt-4" color="neutral" variant="outline" @click="search = ''; workspace = ''">
-            Clear filters
+          <UButton v-if="hasSessions" class="mt-4" color="neutral" variant="outline" @click="search = ''">
+            Clear search
           </UButton>
         </div>
         <SessionLoadMore :has-more="hasNextPage" :loading="isLoading" :failed="!!error" @load="loadNextPage({ cancelRefetch: false })" />

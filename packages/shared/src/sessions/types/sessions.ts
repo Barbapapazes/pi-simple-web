@@ -23,7 +23,6 @@ export interface SessionPage {
   items: SessionSummary[]
   nextOffset: number | null
   total: number
-  workspaces: string[]
 }
 
 export interface SessionMetrics {

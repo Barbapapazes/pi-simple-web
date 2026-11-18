@@ -61,7 +61,7 @@ try {
   const sessions = await fetch(`${api}/api/sessions`, { headers: { origin } })
   assert.equal(sessions.status, 200)
   assert.equal(sessions.headers.get('access-control-allow-origin'), origin)
-  assert.deepEqual(await sessions.json(), { items: [], total: 0, nextOffset: null, workspaces: [] })
+  assert.deepEqual(await sessions.json(), { items: [], total: 0, nextOffset: null })
   const timestamp = '2026-01-01T00:00:00.000Z'
   const sessionPath = join(directory, 'smoke.jsonl')
   await writeFile(sessionPath, `${[

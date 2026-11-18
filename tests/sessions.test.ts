@@ -102,22 +102,20 @@ test('paginates history, filters before slicing, and keeps metrics global', asyn
         { type: 'message', id: `user-${i}`, parentId: null, timestamp, message: { role: 'user', content: `Message ${i}`, timestamp: Date.parse(timestamp) } },
       ].map(entry => JSON.stringify(entry)).join('\n')}\n`)
     }
-    const options = { offset: 0, limit: 2, search: '', workspace: '' }
+    const options = { offset: 0, limit: 2, search: '' }
     const first = await listSessionPage(options, root)
     assert.deepEqual(first.items.map(item => item.id), ['session-4', 'session-3'])
     assert.equal(first.total, 5)
     assert.equal(first.nextOffset, 2)
-    assert.deepEqual(first.workspaces, ['/other', '/project'])
     assert.equal('path' in first.items[0]!, false)
     const second = await listSessionPage({ ...options, offset: first.nextOffset! }, root)
     assert.deepEqual(second.items.map(item => item.id), ['session-2', 'session-1'])
     const last = await listSessionPage({ ...options, offset: second.nextOffset! }, root)
     assert.deepEqual(last.items.map(item => item.id), ['session-0'])
     assert.equal(last.nextOffset, null)
-    const filtered = await listSessionPage({ ...options, workspace: '/project' }, root)
+    const filtered = await listSessionPage({ ...options, search: '/project' }, root)
     assert.deepEqual(filtered.items.map(item => item.id), ['session-4', 'session-2'])
     assert.equal(filtered.total, 3)
-    assert.deepEqual(filtered.workspaces, first.workspaces)
     const search = await listSessionPage({ ...options, search: ' MESSAGE 0 ' }, root)
     assert.deepEqual(search.items.map(item => item.id), ['session-0'])
     assert.equal(search.nextOffset, null)

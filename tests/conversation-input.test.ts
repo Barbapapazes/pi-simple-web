@@ -1,13 +1,10 @@
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent'
 import type { ConversationEvent } from '@pi-simple-web/shared/conversations/types/conversation'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { test } from 'node:test'
 import { SessionManager } from '@earendil-works/pi-coding-agent'
 import { messageShortcut } from '@pi-simple-web/shared/conversations/utils/conversation-input'
-import { createConversationEmitter, createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../apps/api/modules/conversations/runtime/server/services/conversation.ts'
+import { createConversationEmitter, createConversationRun, streamConversation, validateConversationInput } from '../apps/api/modules/conversations/runtime/server/services/conversation.ts'
 import { sessionUsage } from '../apps/api/modules/sessions/runtime/server/services/status.ts'
 
 test('chat accepts only non-empty, bounded messages and valid IDs', () => {
@@ -15,30 +12,6 @@ test('chat accepts only non-empty, bounded messages and valid IDs', () => {
   assert.deepEqual(validateConversationInput({ message: 'Hello' }), { message: 'Hello', id: undefined })
   for (const body of [null, 'hello', {}, { message: '  ' }, { message: 1 }, { message: 'x'.repeat(100_001) }, { message: 'hi', id: 1 }, { message: 'hi', id: '' }]) {
     assert.throws(() => validateConversationInput(body))
-  }
-})
-
-test('new conversations accept absolute workspace paths, but existing sessions cannot change workspace', () => {
-  const cwd = join(tmpdir(), 'project')
-  assert.deepEqual(validateConversationInput({ message: 'Hello', cwd: `  ${cwd}  ` }), { message: 'Hello', id: undefined, cwd })
-  for (const workspace of ['', '   ', 'relative/path', '~/project', 123, '/bad\0path', `/${'x'.repeat(4096)}`]) {
-    assert.throws(() => validateConversationInput({ message: 'Hello', cwd: workspace }))
-  }
-  assert.throws(() => validateConversationInput({ message: 'Hello', id: 'session-id', cwd }), /recorded workspace/)
-})
-
-test('workspace must exist and be a directory; omission uses the server user home directory', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'pi-workspace-'))
-  try {
-    assert.equal(await resolveConversationCwd(directory), directory)
-    assert.equal(await resolveConversationCwd(), homedir())
-    await assert.rejects(resolveConversationCwd(join(directory, 'missing')), /does not exist/)
-    const file = join(directory, 'file.txt')
-    await writeFile(file, 'not a directory')
-    await assert.rejects(resolveConversationCwd(file), /must be a directory/)
-  }
-  finally {
-    await rm(directory, { recursive: true, force: true })
   }
 })
 

@@ -2,7 +2,7 @@
 import type { StreamingBehavior } from '@pi-simple-web/shared/conversations/types/conversation'
 import { messageShortcut } from '@pi-simple-web/shared/conversations/utils/conversation-input'
 
-const props = defineProps<{ sessionId?: string, cwd?: string, disabled?: boolean }>()
+const props = defineProps<{ sessionId?: string, disabled?: boolean }>()
 const draft = ref('')
 const queuing = ref(false)
 const windows = ref(false)
@@ -32,7 +32,7 @@ async function submit(behavior: StreamingBehavior = 'steer') {
     }
   }
   else {
-    accepted = await send(message, props.sessionId, props.cwd?.trim() || undefined)
+    accepted = await send(message, props.sessionId)
   }
   if (!accepted)
     draft.value = draft.value ? `${message}\n${draft.value}` : message
