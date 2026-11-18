@@ -1,9 +1,10 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent'
+import { homedir } from 'node:os'
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
 import { conversationEntry, findSessionInfo, invalidateSessionIndex } from '../../../../sessions/runtime/server/services/sessions'
 import { liveStatus, workspaceStatus } from '../../../../sessions/runtime/server/services/status'
 import { createConversationResourceLoader, disposeConversationSession } from '../services/agent'
-import { createConversationRun, resolveConversationCwd, streamConversation, validateConversationInput } from '../services/conversation'
+import { createConversationRun, streamConversation, validateConversationInput } from '../services/conversation'
 import { activeRuns, activeSessions, createLiveConversation, liveConversations } from '../services/live-conversations'
 import { observeConversation } from '../services/observe-conversation'
 
@@ -42,13 +43,7 @@ export default defineEventHandler(async (event) => {
     const info = input.id ? await findSessionInfo(input.id, sessionDir) : undefined
     if (input.id && !info)
       throw createError({ statusCode: 404, statusMessage: 'Session not found.' })
-    let cwd: string
-    try {
-      cwd = await resolveConversationCwd(info?.cwd || input.cwd)
-    }
-    catch (error) {
-      throw createError({ statusCode: 400, statusMessage: error instanceof Error ? error.message : 'Invalid workspace.' })
-    }
+    const cwd = info?.cwd || homedir()
     const sessionManager = info
       ? SessionManager.open(info.path, sessionDir)
       : sessionDir ? SessionManager.create(cwd, sessionDir) : undefined

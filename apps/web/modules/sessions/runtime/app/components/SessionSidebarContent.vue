@@ -9,7 +9,7 @@ function preloadSession(id: string) {
     // Prefetch failures should not interrupt navigation; the page handles errors.
   })
 }
-const { data: sessions, filteredSessions, search, workspace, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
+const { data: sessions, filteredSessions, search, error, isPending, isLoading, refetch, hasNextPage, loadNextPage } = useSessions()
 const groups = computed(() => {
   const named = filteredSessions.value.filter(session => session.name)
   const other = filteredSessions.value.filter(session => !session.name)
@@ -31,7 +31,6 @@ const groups = computed(() => {
   <template v-if="!collapsed">
     <div class="flex shrink-0 flex-col gap-2">
       <UInput v-model="search" icon="i-lucide-search" placeholder="Search sessions…" aria-label="Search sessions" class="w-full" />
-      <WorkspaceDropdown />
     </div>
     <div class="flex shrink-0 items-center justify-between px-2">
       <span class="text-xs font-medium text-muted">SESSION HISTORY</span>
@@ -71,7 +70,7 @@ const groups = computed(() => {
         </div>
       </div>
       <p v-if="!groups.length" class="px-2 text-xs text-muted">
-        {{ search || workspace ? 'No matching sessions.' : 'No sessions yet.' }}
+        {{ search ? 'No matching sessions.' : 'No sessions yet.' }}
       </p>
       <SessionLoadMore :has-more="hasNextPage" :loading="isLoading" :failed="!!error" @load="loadNextPage({ cancelRefetch: false })" />
     </nav>

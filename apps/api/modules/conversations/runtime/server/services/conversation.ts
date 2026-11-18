@@ -1,34 +1,24 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent'
 import type { ConversationEvent, StreamingBehavior } from '@pi-simple-web/shared/conversations/types/conversation'
 import type { SessionStatus } from '@pi-simple-web/shared/sessions/types/sessions'
-import { stat } from 'node:fs/promises'
-import { homedir } from 'node:os'
-import { isAbsolute, normalize } from 'node:path'
 import { conversationEntry } from '../../../../sessions/runtime/server/services/sessions.ts'
 
-export function validateConversationInput(body: unknown): { message: string, id?: string, cwd?: string, streamingBehavior?: StreamingBehavior } {
+export function validateConversationInput(body: unknown): { message: string, id?: string, streamingBehavior?: StreamingBehavior } {
   if (!body || typeof body !== 'object')
     throw new Error('A message is required.')
-  const { message, id, cwd, streamingBehavior } = body as Record<string, unknown>
+  const { message, id, streamingBehavior } = body as Record<string, unknown>
   if (typeof message !== 'string' || !message.trim())
     throw new Error('A message is required.')
   if (message.length > 100_000)
     throw new Error('Message is too long (maximum 100,000 characters).')
   if (id !== undefined && (typeof id !== 'string' || !id || id.length > 200))
     throw new Error('Invalid session ID.')
-  if (cwd !== undefined && (typeof cwd !== 'string' || !cwd.trim() || cwd.length > 4096 || cwd.includes('\0'))) {
-    throw new Error('Invalid workspace path.')
-  }
-  if (id !== undefined && cwd !== undefined)
-    throw new Error('Existing sessions use their recorded workspace.')
-  if (typeof cwd === 'string' && !isAbsolute(cwd.trim()))
-    throw new Error('Workspace must be an absolute path on the server.')
   if (streamingBehavior !== undefined && streamingBehavior !== 'steer' && streamingBehavior !== 'followUp') {
     throw new Error('Invalid streaming behavior.')
   }
   if (streamingBehavior !== undefined && !id)
     throw new Error('Queued messages require a session ID.')
-  return { message: message.trim(), id: id as string | undefined, ...(typeof cwd === 'string' ? { cwd: normalize(cwd.trim()) } : {}), ...(streamingBehavior ? { streamingBehavior } : {}) }
+  return { message: message.trim(), id: id as string | undefined, ...(streamingBehavior ? { streamingBehavior } : {}) }
 }
 
 // Keep the session and its observer alive if an input hook finishes just as the
@@ -54,20 +44,6 @@ export function createConversationRun(session: Pick<AgentSession, 'prompt'>) {
       accepting = false
     },
   }
-}
-
-export async function resolveConversationCwd(cwd?: string): Promise<string> {
-  const workspace = cwd ?? homedir()
-  let directory
-  try {
-    directory = await stat(workspace)
-  }
-  catch {
-    throw new Error('Workspace does not exist or cannot be accessed by the server.')
-  }
-  if (!directory.isDirectory())
-    throw new Error('Workspace must be a directory.')
-  return workspace
 }
 
 // The browser stream is only an observer; disconnecting must not stop the agent.

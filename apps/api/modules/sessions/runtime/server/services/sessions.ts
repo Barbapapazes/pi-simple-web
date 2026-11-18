@@ -82,12 +82,11 @@ export async function listSessionSummaries(sessionDir?: string): Promise<Session
   return summaries
 }
 
-export async function listSessionPage(options: { offset: number, limit: number, search: string, workspace: string }, sessionDir?: string): Promise<SessionPage> {
+export async function listSessionPage(options: { offset: number, limit: number, search: string }, sessionDir?: string): Promise<SessionPage> {
   const sessions = await listSessions(sessionDir)
   const term = options.search.trim().toLowerCase()
   const filtered = sessions.filter(session =>
-    (!options.workspace || session.cwd === options.workspace)
-    && (!term || [session.name, session.firstMessage, session.cwd, session.id].some(value => value?.toLowerCase().includes(term))),
+    !term || [session.name, session.firstMessage, session.cwd, session.id].some(value => value?.toLowerCase().includes(term)),
   )
   const page = filtered.slice(options.offset, options.offset + options.limit)
   const items = await Promise.all(page.map(async info => summarizeSession(info, await readSessionUsage(info))))
@@ -96,7 +95,6 @@ export async function listSessionPage(options: { offset: number, limit: number, 
     items,
     total: filtered.length,
     nextOffset: next < filtered.length ? next : null,
-    workspaces: [...new Set(sessions.map(session => session.cwd))].sort(),
   }
 }
 

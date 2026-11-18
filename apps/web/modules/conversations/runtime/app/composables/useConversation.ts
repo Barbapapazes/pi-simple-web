@@ -217,7 +217,7 @@ export function useConversation() {
     }
   }
 
-  async function send(message: string, id?: string, cwd?: string) {
+  async function send(message: string, id?: string) {
     if (state.value.busy || !message.trim())
       return false
     transport?.controller.abort()
@@ -229,7 +229,7 @@ export function useConversation() {
         method: 'POST',
         signal: current.controller.signal,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, id, cwd }),
+        body: JSON.stringify({ message, id }),
       })
       if (!response.ok) {
         const error = await response.json().catch(() => null)
